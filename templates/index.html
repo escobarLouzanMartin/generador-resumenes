@@ -196,11 +196,11 @@
     <div class="panel">
       <h2>Cargar compra</h2>
       <label>Comprador</label>
-      <input type="text" id="comprador" placeholder="Ej: Axtarothh" autocomplete="off">
+      <input type="text" id="comprador" placeholder="Ej: Ash Ketchum" autocomplete="off">
       <label>Carta</label>
-      <input type="text" id="carta" placeholder="Ej: Dark Magician (YAP)">
+      <input type="text" id="carta" placeholder="Ej: Dark Magician">
       <label>Precio ($)</label>
-      <input type="text" id="precio" placeholder="Ej: 12000" id="precio">
+      <input type="text" id="precio" placeholder="Ej: 1000" id="precio">
       <div class="error-msg" id="error"></div>
       <button class="btn btn-primary" onclick="agregarCompra()">Agregar compra</button>
       <div class="acciones">
@@ -260,7 +260,8 @@
 
     document.getElementById('carta').value = '';
     document.getElementById('precio').value = '';
-    document.getElementById('carta').focus();
+    const esMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+    if (!esMobile) document.getElementById('carta').focus();
 
     await cargarCompras();
   }
