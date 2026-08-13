@@ -1,3 +1,4 @@
+cat > /home/claude/generador-resumenes/templates/index.html << 'HTMLEOF'
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -15,12 +16,7 @@
       padding: 16px;
     }
 
-    h1 {
-      font-size: 20px;
-      font-weight: 600;
-      margin-bottom: 20px;
-      color: #fff;
-    }
+    h1 { font-size: 20px; font-weight: 600; margin-bottom: 20px; color: #fff; }
 
     .layout {
       display: grid;
@@ -45,15 +41,9 @@
       margin-bottom: 16px;
     }
 
-    label {
-      display: block;
-      font-size: 12px;
-      color: #888;
-      margin-bottom: 4px;
-      margin-top: 12px;
-    }
+    label { display: block; font-size: 12px; color: #888; margin-bottom: 4px; margin-top: 12px; }
 
-    input {
+    input, .autocomplete-wrapper input {
       width: 100%;
       background: #111;
       border: 1px solid #2a2a2a;
@@ -64,8 +54,27 @@
       outline: none;
       transition: border-color 0.2s;
     }
-
     input:focus { border-color: #444; }
+
+    .autocomplete-wrapper { position: relative; }
+    .autocomplete-list {
+      position: absolute;
+      top: 100%;
+      left: 0; right: 0;
+      background: #1e1e1e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      margin-top: 4px;
+      z-index: 100;
+      overflow: hidden;
+    }
+    .autocomplete-item {
+      padding: 10px 12px;
+      font-size: 14px;
+      cursor: pointer;
+      color: #e0e0e0;
+    }
+    .autocomplete-item:hover { background: #2a2a2a; }
 
     .btn {
       width: 100%;
@@ -78,21 +87,22 @@
       cursor: pointer;
       transition: opacity 0.2s;
     }
-
     .btn:hover { opacity: 0.85; }
-
     .btn-primary { background: #1d4ed8; color: #ccc; }
     .btn-danger  { background: #991b1b; color: #ccc; margin-top: 8px; }
     .btn-success { background: #15803d; color: #ccc; margin-top: 8px; }
+    .btn-edit    { background: #92400e; color: #ccc; margin-top: 8px; }
 
-    .error-msg {
-      font-size: 13px;
-      color: #ef4444;
-      margin-top: 8px;
-      min-height: 18px;
+    .error-msg { font-size: 13px; color: #ef4444; margin-top: 8px; min-height: 18px; }
+
+    .editing-badge {
+      display: none;
+      font-size: 12px;
+      color: #f59e0b;
+      margin-top: 6px;
     }
+    .editing-badge.visible { display: block; }
 
-    /* Lista de compras cargadas */
     .compras-lista {
       margin-top: 8px;
       display: flex;
@@ -112,31 +122,35 @@
       align-items: center;
       font-size: 13px;
     }
+    .compra-item.editing { border-color: #f59e0b; }
 
     .compra-item .info { flex: 1; }
     .compra-item .nombre { font-weight: 500; color: #fff; }
     .compra-item .carta-precio { color: #888; font-size: 12px; margin-top: 2px; }
 
-    .btn-eliminar {
+    .item-acciones { display: flex; gap: 4px; }
+
+    .btn-editar, .btn-eliminar {
       background: none;
       border: none;
-      color: #555;
       cursor: pointer;
-      font-size: 20px;
-      padding: 6px 10px;
+      font-size: 16px;
+      padding: 6px 8px;
       border-radius: 6px;
       transition: color 0.2s;
     }
+    .btn-editar { color: #555; }
+    .btn-editar:hover { color: #f59e0b; }
+    .btn-eliminar { color: #555; }
     .btn-eliminar:hover { color: #ef4444; }
 
     .empty { color: #444; font-size: 13px; text-align: center; padding: 20px 0; }
 
+    .acciones { display: flex; gap: 8px; margin-top: 4px; }
+    .acciones .btn { margin-top: 0; }
+
     /* Resúmenes */
-    .resumenes-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
+    .resumenes-grid { display: flex; flex-direction: column; gap: 14px; }
 
     .resumen-card {
       background: #111;
@@ -152,9 +166,14 @@
       justify-content: space-between;
       align-items: center;
       border-bottom: 1px solid #2a2a2a;
+      gap: 8px;
     }
 
+    .resumen-header-left { display: flex; flex-direction: column; gap: 2px; }
     .resumen-nombre { font-weight: 500; font-size: 15px; color: #fff; }
+    .resumen-contacto { font-size: 11px; color: #666; }
+
+    .resumen-header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
     .resumen-total {
       background: #1d4ed8;
@@ -164,8 +183,21 @@
       padding: 4px 10px;
       border-radius: 6px;
       white-space: nowrap;
-      margin-left: 8px;
     }
+
+    .btn-copiar {
+      background: #1e1e1e;
+      border: 1px solid #333;
+      color: #888;
+      cursor: pointer;
+      font-size: 13px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn-copiar:hover { border-color: #555; color: #ccc; }
+    .btn-copiar.copiado { border-color: #15803d; color: #4ade80; }
 
     .resumen-item {
       display: flex;
@@ -175,31 +207,16 @@
       border-bottom: 1px solid #1a1a1a;
       gap: 8px;
     }
-
     .resumen-item:last-child { border-bottom: none; }
     .resumen-item .r-carta { color: #ccc; }
     .resumen-item .r-precio { color: #888; white-space: nowrap; }
 
-    .acciones {
-      display: flex;
-      gap: 8px;
-      margin-top: 4px;
-    }
-    .acciones .btn { margin-top: 0; }
-
     /* Mobile */
     @media (max-width: 700px) {
       body { padding: 12px; }
-
       h1 { font-size: 18px; margin-bottom: 16px; }
-
-      .layout {
-        grid-template-columns: 1fr;
-        gap: 16px;
-      }
-
+      .layout { grid-template-columns: 1fr; gap: 16px; }
       .panel { padding: 16px; }
-
       .compras-lista { max-height: 220px; }
     }
   </style>
@@ -210,21 +227,32 @@
 
 <div class="layout">
 
-  <!-- Panel izquierdo: carga y lista -->
   <div>
     <div class="panel">
-      <h2>Cargar compra</h2>
+      <h2 id="form-titulo">Cargar compra</h2>
+
       <label>Comprador</label>
-      <input type="text" id="comprador" placeholder="Ej: Ash Ketchum" autocomplete="off">
+      <div class="autocomplete-wrapper">
+        <input type="text" id="comprador" placeholder="Ej: Ash Ketchum" autocomplete="off">
+        <div class="autocomplete-list" id="autocomplete-list" style="display:none;"></div>
+      </div>
+
+      <label>Contacto <span style="color:#555;">(opcional)</span></label>
+      <input type="text" id="contacto" placeholder="Ej: 1123456789" autocomplete="off">
+
       <label>Carta</label>
       <input type="text" id="carta" placeholder="Ej: Dark Magician">
+
       <label>Precio ($)</label>
-      <input type="text" id="precio" placeholder="Ej: 1000" id="precio">
+      <input type="text" id="precio" placeholder="Ej: 1000">
+
       <div class="error-msg" id="error"></div>
-      <button class="btn btn-primary" onclick="agregarCompra()">Agregar compra</button>
+      <div class="editing-badge" id="editing-badge">✏️ Editando compra — guardá para confirmar</div>
+
+      <button class="btn btn-primary" id="btn-agregar" onclick="guardarCompra()">Agregar compra</button>
       <div class="acciones">
-        <button class="btn btn-success" onclick="generarResumenes()">Generar resúmenes</button>
-        <button class="btn btn-danger" onclick="limpiarTodo()">Limpiar todo</button>
+        <button class="btn btn-danger" onclick="cancelarEdicion()" id="btn-cancelar" style="display:none;">Cancelar</button>
+        <button class="btn btn-danger" onclick="limpiarTodo()" id="btn-limpiar">Limpiar todo</button>
       </div>
     </div>
 
@@ -236,55 +264,140 @@
     </div>
   </div>
 
-  <!-- Panel derecho: resúmenes -->
   <div class="panel">
     <h2>Resúmenes por comprador</h2>
     <div class="resumenes-grid" id="resumenes">
-      <div class="empty">Los resúmenes aparecerán acá una vez que generes</div>
+      <div class="empty">Los resúmenes aparecerán acá automáticamente</div>
     </div>
   </div>
 
 </div>
 
 <script>
+  let editandoIdx = null;
+
   function formatPrecio(n) {
     return '$' + n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   }
 
-  async function agregarCompra() {
+  // ── Autocompletado ──────────────────────────────────────────
+  function getCompradores() {
+    const items = document.querySelectorAll('.compra-item .nombre');
+    const nombres = [...new Set([...items].map(el => el.textContent.trim()))];
+    return nombres;
+  }
+
+  document.getElementById('comprador').addEventListener('input', function() {
+    const val = this.value.trim().toLowerCase();
+    const lista = document.getElementById('autocomplete-list');
+    if (!val) { lista.style.display = 'none'; return; }
+    const matches = getCompradores().filter(n => n.toLowerCase().startsWith(val));
+    if (matches.length === 0) { lista.style.display = 'none'; return; }
+    lista.innerHTML = matches.map(n =>
+      `<div class="autocomplete-item" onclick="seleccionarComprador('${n}')">${n}</div>`
+    ).join('');
+    lista.style.display = 'block';
+  });
+
+  function seleccionarComprador(nombre) {
+    document.getElementById('comprador').value = nombre;
+    document.getElementById('autocomplete-list').style.display = 'none';
+    // Autocompletar contacto si ya existe para ese comprador
+    const items = document.querySelectorAll('.compra-item');
+    for (const item of items) {
+      if (item.querySelector('.nombre').textContent.trim() === nombre) {
+        const contactoEl = item.querySelector('.contacto-dato');
+        if (contactoEl) document.getElementById('contacto').value = contactoEl.textContent.trim();
+        break;
+      }
+    }
+    document.getElementById('carta').focus();
+  }
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.autocomplete-wrapper')) {
+      document.getElementById('autocomplete-list').style.display = 'none';
+    }
+  });
+
+  // ── Agregar / Editar ────────────────────────────────────────
+  async function guardarCompra() {
     const comprador = document.getElementById('comprador').value.trim();
-    const carta = document.getElementById('carta').value.trim();
-    const precio = document.getElementById('precio').value.trim();
-    const errorEl = document.getElementById('error');
+    const contacto  = document.getElementById('contacto').value.trim();
+    const carta     = document.getElementById('carta').value.trim();
+    const precio    = document.getElementById('precio').value.trim();
+    const errorEl   = document.getElementById('error');
 
     errorEl.textContent = '';
 
     if (!comprador || !carta || !precio) {
-      errorEl.textContent = 'Completá todos los campos.';
+      errorEl.textContent = 'Completá los campos obligatorios.';
       return;
+    }
+
+    if (editandoIdx !== null) {
+      // Eliminar la compra anterior y agregar la editada
+      await fetch('/eliminar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ index: editandoIdx })
+      });
+      editandoIdx = null;
     }
 
     const res = await fetch('/agregar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ comprador, carta, precio })
+      body: JSON.stringify({ comprador, contacto, carta, precio })
     });
 
     const data = await res.json();
+    if (!res.ok) { errorEl.textContent = data.error; return; }
 
-    if (!res.ok) {
-      errorEl.textContent = data.error;
-      return;
-    }
-
-    document.getElementById('carta').value = '';
-    document.getElementById('precio').value = '';
-    const esMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-    if (!esMobile) document.getElementById('carta').focus();
-
+    limpiarFormulario();
     await cargarCompras();
+    await generarResumenes();
   }
 
+  function limpiarFormulario() {
+    document.getElementById('comprador').value = '';
+    document.getElementById('contacto').value = '';
+    document.getElementById('carta').value = '';
+    document.getElementById('precio').value = '';
+    document.getElementById('error').textContent = '';
+    document.getElementById('editing-badge').classList.remove('visible');
+    document.getElementById('btn-agregar').textContent = 'Agregar compra';
+    document.getElementById('btn-cancelar').style.display = 'none';
+    document.getElementById('btn-limpiar').style.display = '';
+    document.getElementById('form-titulo').textContent = 'Cargar compra';
+    editandoIdx = null;
+    const esMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+    if (!esMobile) document.getElementById('carta').focus();
+  }
+
+  function editarCompra(idx) {
+    fetch('/compras').then(r => r.json()).then(compras => {
+      const c = compras[idx];
+      document.getElementById('comprador').value = c.comprador;
+      document.getElementById('contacto').value  = c.contacto || '';
+      document.getElementById('carta').value     = c.carta;
+      document.getElementById('precio').value    = c.precio;
+      document.getElementById('editing-badge').classList.add('visible');
+      document.getElementById('btn-agregar').textContent = 'Guardar cambios';
+      document.getElementById('btn-cancelar').style.display = '';
+      document.getElementById('btn-limpiar').style.display = 'none';
+      document.getElementById('form-titulo').textContent = 'Editar compra';
+      editandoIdx = idx;
+      document.querySelector('.panel').scrollIntoView({ behavior: 'smooth' });
+      document.getElementById('carta').focus();
+    });
+  }
+
+  function cancelarEdicion() {
+    limpiarFormulario();
+  }
+
+  // ── Cargar lista ────────────────────────────────────────────
   async function cargarCompras() {
     const res = await fetch('/compras');
     const compras = await res.json();
@@ -298,33 +411,41 @@
     }
 
     lista.innerHTML = compras.map((c, i) => `
-      <div class="compra-item">
+      <div class="compra-item ${editandoIdx === i ? 'editing' : ''}">
         <div class="info">
           <div class="nombre">${c.comprador}</div>
-          <div class="carta-precio">${c.carta} · ${formatPrecio(c.precio)}</div>
+          <div class="carta-precio">
+            ${c.carta} · ${formatPrecio(c.precio)}
+            ${c.contacto ? `<span class="contacto-dato" style="display:none">${c.contacto}</span>` : ''}
+          </div>
         </div>
-        <button class="btn-eliminar" onclick="eliminar(${i})" title="Eliminar">✕</button>
+        <div class="item-acciones">
+          <button class="btn-editar" onclick="editarCompra(${i})" title="Editar">✏️</button>
+          <button class="btn-eliminar" onclick="eliminar(${i})" title="Eliminar">✕</button>
+        </div>
       </div>
     `).join('');
   }
 
   async function eliminar(idx) {
+    if (editandoIdx === idx) cancelarEdicion();
     await fetch('/eliminar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ index: idx })
     });
     await cargarCompras();
+    await generarResumenes();
   }
 
+  // ── Resúmenes ───────────────────────────────────────────────
   async function generarResumenes() {
     const res = await fetch('/resumenes');
     const resumenes = await res.json();
-
     const el = document.getElementById('resumenes');
 
     if (resumenes.length === 0) {
-      el.innerHTML = '<div class="empty">No hay compras cargadas</div>';
+      el.innerHTML = '<div class="empty">Los resúmenes aparecerán acá automáticamente</div>';
       return;
     }
 
@@ -333,8 +454,14 @@
     el.innerHTML = resumenes.map(r => `
       <div class="resumen-card">
         <div class="resumen-header">
-          <span class="resumen-nombre">${r.comprador}</span>
-          <span class="resumen-total">Total: ${formatPrecio(r.total)}</span>
+          <div class="resumen-header-left">
+            <span class="resumen-nombre">${r.comprador}</span>
+            ${r.contacto ? `<span class="resumen-contacto">${r.contacto}</span>` : ''}
+          </div>
+          <div class="resumen-header-right">
+            <span class="resumen-total">Total: ${formatPrecio(r.total)}</span>
+            <button class="btn-copiar" onclick="copiarResumen(this, '${r.comprador}')">Copiar</button>
+          </div>
         </div>
         ${r.items.map(i => `
           <div class="resumen-item">
@@ -351,25 +478,53 @@
     `;
   }
 
+  function copiarResumen(btn, nombreComprador) {
+    fetch('/resumenes').then(r => r.json()).then(resumenes => {
+      const r = resumenes.find(x => x.comprador === nombreComprador);
+      if (!r) return;
+      const lineas = [
+        `📋 Resumen de compra — ${r.comprador}`,
+        r.contacto ? `📞 ${r.contacto}` : '',
+        '',
+        ...r.items.map(i => `• ${i.carta}: ${formatPrecio(i.precio)}`),
+        '',
+        `Total: ${formatPrecio(r.total)}`
+      ].filter(l => l !== null && l !== undefined);
+
+      navigator.clipboard.writeText(lineas.join('\n')).then(() => {
+        btn.textContent = '✓ Copiado';
+        btn.classList.add('copiado');
+        setTimeout(() => {
+          btn.textContent = 'Copiar';
+          btn.classList.remove('copiado');
+        }, 2000);
+      });
+    });
+  }
+
+  // ── Limpiar ─────────────────────────────────────────────────
   async function limpiarTodo() {
     if (!confirm('¿Seguro que querés limpiar todas las compras?')) return;
     await fetch('/limpiar', { method: 'POST' });
     await cargarCompras();
-    document.getElementById('resumenes').innerHTML = '<div class="empty">Los resúmenes aparecerán acá una vez que generes</div>';
+    await generarResumenes();
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    // Cargar compras existentes al abrir la página
-    cargarCompras();
+  // ── Init ─────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', async () => {
+    await cargarCompras();
+    await generarResumenes();
 
-    // Enter en precio dispara agregar
     document.getElementById('precio').addEventListener('keydown', e => {
-      if (e.key === 'Enter') agregarCompra();
+      if (e.key === 'Enter') guardarCompra();
     });
     document.getElementById('carta').addEventListener('keydown', e => {
       if (e.key === 'Enter') document.getElementById('precio').focus();
     });
     document.getElementById('comprador').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('carta').focus();
+    });
+    document.getElementById('contacto').addEventListener('keydown', e => {
       if (e.key === 'Enter') document.getElementById('carta').focus();
     });
   });
