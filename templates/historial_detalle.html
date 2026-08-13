@@ -270,10 +270,29 @@
     await generarResumenes();
     await cargarCompradores();
 
-    document.getElementById('precio').addEventListener('keydown', e => { if (e.key === 'Enter') guardarCompra(); });
-    document.getElementById('carta').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('precio').focus(); });
-    document.getElementById('comprador').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('carta').focus(); });
-    document.getElementById('contacto').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('carta').focus(); });
+    const campos = ['comprador', 'contacto', 'carta', 'precio'];
+
+    function navegarCampos(e, idx) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); document.getElementById(campos[Math.min(idx + 1, campos.length - 1)]).focus(); }
+      if (e.key === 'ArrowUp')   { e.preventDefault(); document.getElementById(campos[Math.max(idx - 1, 0)]).focus(); }
+    }
+
+    document.getElementById('precio').addEventListener('keydown', e => {
+      if (e.key === 'Enter') guardarCompra();
+      navegarCampos(e, 3);
+    });
+    document.getElementById('carta').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('precio').focus();
+      navegarCampos(e, 2);
+    });
+    document.getElementById('comprador').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('carta').focus();
+      navegarCampos(e, 0);
+    });
+    document.getElementById('contacto').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('carta').focus();
+      navegarCampos(e, 1);
+    });
   });
 </script>
 
