@@ -55,25 +55,40 @@
     }
     input:focus { border-color: #444; }
 
-    .autocomplete-wrapper { position: relative; }
-    .autocomplete-list {
-      position: absolute;
-      top: 100%;
-      left: 0; right: 0;
-      background: #1e1e1e;
-      border: 1px solid #333;
+    .autocomplete-wrapper {
+      position: relative;
+      background: #111;
+      border: 1px solid #2a2a2a;
       border-radius: 8px;
-      margin-top: 4px;
-      z-index: 100;
-      overflow: hidden;
     }
-    .autocomplete-item {
+    .autocomplete-wrapper input { border-color: transparent; }
+    .autocomplete-wrapper input:focus { border-color: #444; }
+    .autocomplete-wrapper:focus-within { border-color: #444; }
+
+    /* Ghost text: capa detrás del input real que muestra la sugerencia.
+       El input va encima con fondo transparente; los caracteres ya
+       tipeados quedan invisibles en la capa ghost (misma tipografía),
+       y el resto de la sugerencia se ve atenuada. */
+    .autocomplete-wrapper input {
+      position: relative;
+      z-index: 1;
+      background: transparent;
+    }
+    .autocomplete-ghost {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      align-items: center;
       padding: 10px 12px;
-      font-size: 14px;
-      cursor: pointer;
-      color: #e0e0e0;
+      font-size: 16px;
+      font-family: inherit;
+      white-space: pre;
+      overflow: hidden;
+      pointer-events: none;
+      border: 1px solid transparent;
     }
-    .autocomplete-item:hover { background: #2a2a2a; }
+    .autocomplete-ghost .typed { visibility: hidden; }
+    .autocomplete-ghost .suggestion { color: #555; }
 
     .btn {
       width: 100%;
@@ -133,14 +148,14 @@
       background: none;
       border: none;
       cursor: pointer;
-      font-size: 16px;
+      font-size: 13px;
       padding: 6px 8px;
       border-radius: 6px;
+      color: #555;
       transition: color 0.2s;
     }
-    .btn-editar { color: #555; }
-    .btn-editar:hover { color: #f59e0b; }
-    .btn-eliminar { color: #555; }
+    .btn-editar:hover { color: #ccc; }
+    .btn-eliminar { font-size: 16px; }
     .btn-eliminar:hover { color: #ef4444; }
 
     .empty { color: #444; font-size: 13px; text-align: center; padding: 20px 0; }
@@ -232,8 +247,8 @@
 
       <label>Comprador</label>
       <div class="autocomplete-wrapper">
+        <div class="autocomplete-ghost" id="autocomplete-ghost"></div>
         <input type="text" id="comprador" placeholder="Ej: Ash Ketchum" autocomplete="off">
-        <div class="autocomplete-list" id="autocomplete-list" style="display:none;"></div>
       </div>
 
       <label>Contacto <span style="color:#555;">(opcional)</span></label>
@@ -246,7 +261,7 @@
       <input type="text" id="precio" placeholder="Ej: 1000">
 
       <div class="error-msg" id="error"></div>
-      <div class="editing-badge" id="editing-badge">✏️ Editando compra — guardá para confirmar</div>
+      <div class="editing-badge" id="editing-badge">Editando compra — guardá para confirmar</div>
 
       <button class="btn btn-primary" id="btn-agregar" onclick="guardarCompra()">Agregar compra</button>
       <div class="acciones">
@@ -274,49 +289,75 @@
 
 <script>
   let editandoIdx = null;
+  let comprasCache = [];
 
   function formatPrecio(n) {
     return '$' + n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   }
 
-  // ── Autocompletado ──────────────────────────────────────────
-  function getCompradores() {
-    const items = document.querySelectorAll('.compra-item .nombre');
-    const nombres = [...new Set([...items].map(el => el.textContent.trim()))];
+  function escapeHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  // ── Autocompletado (estilo Gmail: texto fantasma + Tab) ──────
+  function getCompradoresUnicos() {
+    const vistos = new Set();
+    const nombres = [];
+    for (const c of comprasCache) {
+      if (!vistos.has(c.comprador)) {
+        vistos.add(c.comprador);
+        nombres.push(c.comprador);
+      }
+    }
     return nombres;
   }
 
-  document.getElementById('comprador').addEventListener('input', function() {
-    const val = this.value.trim().toLowerCase();
-    const lista = document.getElementById('autocomplete-list');
-    if (!val) { lista.style.display = 'none'; return; }
-    const matches = getCompradores().filter(n => n.toLowerCase().startsWith(val));
-    if (matches.length === 0) { lista.style.display = 'none'; return; }
-    lista.innerHTML = matches.map(n =>
-      `<div class="autocomplete-item" onclick="seleccionarComprador('${n}')">${n}</div>`
-    ).join('');
-    lista.style.display = 'block';
-  });
-
-  function seleccionarComprador(nombre) {
-    document.getElementById('comprador').value = nombre;
-    document.getElementById('autocomplete-list').style.display = 'none';
-    // Autocompletar contacto si ya existe para ese comprador
-    const items = document.querySelectorAll('.compra-item');
-    for (const item of items) {
-      if (item.querySelector('.nombre').textContent.trim() === nombre) {
-        const contactoEl = item.querySelector('.contacto-dato');
-        if (contactoEl) document.getElementById('contacto').value = contactoEl.textContent.trim();
-        break;
-      }
-    }
-    document.getElementById('carta').focus();
+  function contactoDeComprador(nombre) {
+    const c = comprasCache.find(c => c.comprador === nombre && c.contacto);
+    return c ? c.contacto : '';
   }
 
-  document.addEventListener('click', e => {
-    if (!e.target.closest('.autocomplete-wrapper')) {
-      document.getElementById('autocomplete-list').style.display = 'none';
+  const inputComprador = document.getElementById('comprador');
+  const ghostComprador = document.getElementById('autocomplete-ghost');
+  let sugerenciaActual = '';
+
+  function actualizarGhost() {
+    const val = inputComprador.value;
+    sugerenciaActual = '';
+
+    if (!val) { ghostComprador.innerHTML = ''; return; }
+
+    const match = getCompradoresUnicos().find(n =>
+      n.toLowerCase().startsWith(val.toLowerCase()) && n.length > val.length
+    );
+
+    if (!match) { ghostComprador.innerHTML = ''; return; }
+
+    sugerenciaActual = match;
+    const tipeado = match.slice(0, val.length);
+    const resto = match.slice(val.length);
+    ghostComprador.innerHTML =
+      `<span class="typed">${escapeHtml(tipeado)}</span><span class="suggestion">${escapeHtml(resto)}</span>`;
+  }
+
+  inputComprador.addEventListener('input', actualizarGhost);
+
+  inputComprador.addEventListener('keydown', e => {
+    if (e.key === 'Tab' && sugerenciaActual) {
+      e.preventDefault();
+      inputComprador.value = sugerenciaActual;
+      const contacto = contactoDeComprador(sugerenciaActual);
+      if (contacto) document.getElementById('contacto').value = contacto;
+      ghostComprador.innerHTML = '';
+      sugerenciaActual = '';
     }
+  });
+
+  inputComprador.addEventListener('blur', () => {
+    ghostComprador.innerHTML = '';
+    sugerenciaActual = '';
   });
 
   // ── Agregar / Editar ────────────────────────────────────────
@@ -400,6 +441,7 @@
   async function cargarCompras() {
     const res = await fetch('/compras');
     const compras = await res.json();
+    comprasCache = compras;
 
     document.getElementById('contador').textContent = compras.length;
     const lista = document.getElementById('compras-lista');
@@ -413,13 +455,10 @@
       <div class="compra-item ${editandoIdx === i ? 'editing' : ''}">
         <div class="info">
           <div class="nombre">${c.comprador}</div>
-          <div class="carta-precio">
-            ${c.carta} · ${formatPrecio(c.precio)}
-            ${c.contacto ? `<span class="contacto-dato" style="display:none">${c.contacto}</span>` : ''}
-          </div>
+          <div class="carta-precio">${c.carta} · ${formatPrecio(c.precio)}</div>
         </div>
         <div class="item-acciones">
-          <button class="btn-editar" onclick="editarCompra(${i})" title="Editar">✏️</button>
+          <button class="btn-editar" onclick="editarCompra(${i})">Editar</button>
           <button class="btn-eliminar" onclick="eliminar(${i})" title="Eliminar">✕</button>
         </div>
       </div>
@@ -482,16 +521,13 @@
       const r = resumenes.find(x => x.comprador === nombreComprador);
       if (!r) return;
       const lineas = [
-        `📋 Resumen de compra — ${r.comprador}`,
-        r.contacto ? `📞 ${r.contacto}` : '',
-        '',
-        ...r.items.map(i => `• ${i.carta}: ${formatPrecio(i.precio)}`),
+        ...r.items.map(i => `${i.carta}: ${formatPrecio(i.precio)}`),
         '',
         `Total: ${formatPrecio(r.total)}`
-      ].filter(l => l !== null && l !== undefined);
+      ];
 
       navigator.clipboard.writeText(lineas.join('\n')).then(() => {
-        btn.textContent = '✓ Copiado';
+        btn.textContent = 'Copiado';
         btn.classList.add('copiado');
         setTimeout(() => {
           btn.textContent = 'Copiar';

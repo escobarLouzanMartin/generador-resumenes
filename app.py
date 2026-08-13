@@ -17,6 +17,7 @@ def index():
 def agregar():
     data = request.get_json()
     comprador = data.get("comprador", "").strip()
+    contacto = data.get("contacto", "").strip()
     carta = data.get("carta", "").strip()
     precio = data.get("precio", "").strip()
 
@@ -34,6 +35,7 @@ def agregar():
     compras = get_compras()
     compras.append({
         "comprador": comprador,
+        "contacto": contacto,
         "carta": carta,
         "precio": precio_num
     })
@@ -50,11 +52,14 @@ def listar_compras():
 def resumenes():
     compras = get_compras()
     agrupado = {}
+    contactos = {}
     for c in compras:
         nombre = c["comprador"]
         if nombre not in agrupado:
             agrupado[nombre] = []
         agrupado[nombre].append({"carta": c["carta"], "precio": c["precio"]})
+        if c.get("contacto") and not contactos.get(nombre):
+            contactos[nombre] = c["contacto"]
 
     resultado = []
     for nombre in sorted(agrupado.keys()):
@@ -62,6 +67,7 @@ def resumenes():
         total = sum(i["precio"] for i in items)
         resultado.append({
             "comprador": nombre,
+            "contacto": contactos.get(nombre, ""),
             "items": items,
             "total": total
         })
