@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compradores — Generador de Resúmenes</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+{% include '_nav.html' with context %}
+
+<div class="panel" style="max-width: 800px;">
+  <h2>Compradores ({{ compradores|length }})</h2>
+
+  {% if compradores|length == 0 %}
+    <div class="empty">Todavía no hay compradores registrados.</div>
+  {% else %}
+    <div class="compradores-lista">
+      {% for c in compradores %}
+        <div class="comprador-card" id="card-{{ loop.index }}">
+          <div class="comprador-info">
+            <div class="comprador-nombre">{{ c.nombre }}</div>
+            <div class="comprador-contacto">{{ c.contacto if c.contacto else '—' }}</div>
+            <div class="comprador-meta">
+              {{ c.compras }} compra{{ 's' if c.compras != 1 else '' }}
+              · {{ c.subastas|length }} subasta{{ 's' if c.subastas|length != 1 else '' }}
+              ({% for s in c.subastas %}#{{ s }}{% if not loop.last %}, {% endif %}{% endfor %})
+              · Total: {{ c.total|precio }}
+            </div>
+          </div>
+          <button class="btn-editar-comprador" onclick="abrirEdicion('{{ c.nombre|e }}', '{{ c.contacto|e }}', {{ loop.index }})">Editar</button>
+        </div>
+
+        <div class="comprador-edit-form" id="form-{{ loop.index }}" style="display:none;">
+          <input type="text" id="edit-nombre-{{ loop.index }}" value="{{ c.nombre }}" placeholder="Nombre">
+          <input type="text" id="edit-contacto-{{ loop.index }}" value="{{ c.contacto }}" placeholder="Contacto">
+          <div class="edit-acciones">
+            <button class="btn-guardar-comprador" onclick="guardarComprador('{{ c.nombre|e }}', {{ loop.index }})">Guardar</button>
+            <button class="btn-cancelar-comprador" onclick="cerrarEdicion({{ loop.index }})">Cancelar</button>
+          </div>
+          <div class="edit-error" id="edit-error-{{ loop.index }}"></div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>
+
+<script>
+  function abrirEdicion(nombre, contacto, idx) {
+    document.getElementById('card-' + idx).style.display = 'none';
+    document.getElementById('form-' + idx).style.display = 'block';
+    document.getElementById('edit-nombre-' + idx).focus();
+  }
+
+  function cerrarEdicion(idx) {
+    document.getElementById('card-' + idx).style.display = 'flex';
+    document.getElementById('form-' + idx).style.display = 'none';
+    document.getElementById('edit-error-' + idx).textContent = '';
+  }
+
+  async function guardarComprador(nombreOriginal, idx) {
+    const nombre   = document.getElementById('edit-nombre-' + idx).value.trim();
+    const contacto = document.getElementById('edit-contacto-' + idx).value.trim();
+    const errorEl  = document.getElementById('edit-error-' + idx);
+    errorEl.textContent = '';
+
+    if (!nombre) { errorEl.textContent = 'El nombre no puede estar vacío.'; return; }
+
+    const res = await fetch(`/compradores/${encodeURIComponent(nombreOriginal)}/editar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre, contacto })
+    });
+    const data = await res.json();
+    if (!res.ok) { errorEl.textContent = data.error; return; }
+
+    location.reload();
+  }
+</script>
+
+</body>
+</html>

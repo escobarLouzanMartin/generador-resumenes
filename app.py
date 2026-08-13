@@ -101,6 +101,8 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for("index"))
 
+    usernames = [u.username for u in User.query.order_by(User.username).all()]
+
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
@@ -108,12 +110,12 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user is None or not user.check_password(password):
             flash("Usuario o contraseña incorrectos.")
-            return render_template("login.html")
+            return render_template("login.html", usernames=usernames)
 
         login_user(user)
         return redirect(url_for("index"))
 
-    return render_template("login.html")
+    return render_template("login.html", usernames=usernames)
 
 
 @app.route("/logout")
@@ -256,7 +258,103 @@ def compradores():
     return jsonify([{"comprador": n, "contacto": vistos[n]} for n in orden])
 
 
-# ── Historial ─────────────────────────────────────────────────
+# ── Edición de subastas cerradas ─────────────────────────────
+@app.route("/historial/<int:subasta_id>/agregar", methods=["POST"])
+@login_required
+def historial_agregar(subasta_id):
+    subasta = Auction.query.filter_by(id=subasta_id, user_id=current_user.id).first_or_404()
+    data = request.get_json()
+    comprador = data.get("comprador", "").strip()
+    contacto  = data.get("contacto", "").strip()
+    carta     = data.get("carta", "").strip()
+    precio    = data.get("precio", "").strip()
+
+    if not comprador or not carta or not precio:
+        return jsonify({"error": "Faltan datos"}), 400
+    try:
+        precio_num = float(precio.replace(".", "").replace(",", "."))
+    except ValueError:
+        return jsonify({"error": "Precio inválido"}), 400
+    if precio_num < 0:
+        return jsonify({"error": "El precio no puede ser negativo"}), 400
+
+    compra = Purchase(auction_id=subasta.id, comprador=comprador, contacto=contacto, carta=carta, precio=precio_num)
+    db.session.add(compra)
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+@app.route("/historial/<int:subasta_id>/eliminar", methods=["POST"])
+@login_required
+def historial_eliminar(subasta_id):
+    subasta = Auction.query.filter_by(id=subasta_id, user_id=current_user.id).first_or_404()
+    data = request.get_json()
+    idx = data.get("index")
+    compras = subasta.compras
+    if idx is None or idx < 0 or idx >= len(compras):
+        return jsonify({"error": "Índice inválido"}), 400
+    db.session.delete(compras[idx])
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+@app.route("/historial/<int:subasta_id>/compras")
+@login_required
+def historial_compras(subasta_id):
+    subasta = Auction.query.filter_by(id=subasta_id, user_id=current_user.id).first_or_404()
+    return jsonify([c.to_dict() for c in subasta.compras])
+
+
+# ── Sección compradores ───────────────────────────────────────
+@app.route("/compradores_lista")
+@login_required
+def compradores_lista():
+    subastas = Auction.query.filter_by(user_id=current_user.id).all()
+    datos = {}  # nombre -> {contacto, subastas: set, total, compras}
+    for s in subastas:
+        for c in s.compras:
+            if c.comprador not in datos:
+                datos[c.comprador] = {"contacto": c.contacto or "", "subastas": set(), "total": 0.0, "compras": 0}
+            d = datos[c.comprador]
+            if c.contacto and not d["contacto"]:
+                d["contacto"] = c.contacto
+            d["subastas"].add(s.numero)
+            d["total"] += c.precio
+            d["compras"] += 1
+
+    resultado = sorted([
+        {"nombre": n, "contacto": d["contacto"], "subastas": sorted(d["subastas"]), "total": d["total"], "compras": d["compras"]}
+        for n, d in datos.items()
+    ], key=lambda x: x["nombre"].lower())
+
+    return render_template("compradores.html", compradores=resultado, activo="compradores")
+
+
+@app.route("/compradores/<nombre>/editar", methods=["POST"])
+@login_required
+def editar_comprador(nombre):
+    data = request.get_json()
+    nuevo_nombre  = data.get("nombre", "").strip()
+    nuevo_contacto = data.get("contacto", "").strip()
+
+    if not nuevo_nombre:
+        return jsonify({"error": "El nombre no puede estar vacío"}), 400
+
+    compras = (
+        db.session.query(Purchase)
+        .join(Auction)
+        .filter(Auction.user_id == current_user.id, Purchase.comprador == nombre)
+        .all()
+    )
+    if not compras:
+        return jsonify({"error": "Comprador no encontrado"}), 404
+
+    for c in compras:
+        c.comprador = nuevo_nombre
+        if nuevo_contacto:
+            c.contacto = nuevo_contacto
+    db.session.commit()
+    return jsonify({"ok": True})
 @app.route("/historial")
 @login_required
 def historial():
