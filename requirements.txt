@@ -1,5 +1,8 @@
 flask
-gunicorn
-flask-sqlalchemy
 flask-login
+flask-sqlalchemy
+flask-limiter
+flask-talisman
+gunicorn
 psycopg2-binary
+werkzeug

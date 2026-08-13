@@ -1,10 +1,14 @@
 import os
+import re
 from collections import defaultdict
 
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_login import (
     LoginManager, login_user, logout_user, login_required, current_user
 )
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_talisman import Talisman
 
 from models import db, User, Auction, Purchase, ahora
 
@@ -18,7 +22,29 @@ if db_url.startswith("postgres://"):
 
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = os.environ.get("RENDER", False)
 db.init_app(app)
+
+# ── Seguridad: headers HTTP ────────────────────────────────────
+EN_PRODUCCION = bool(os.environ.get("RENDER"))
+Talisman(
+    app,
+    force_https=EN_PRODUCCION,
+    strict_transport_security=EN_PRODUCCION,
+    content_security_policy=False,  # CSP separado si se necesita
+    frame_options="DENY",
+    referrer_policy="strict-origin-when-cross-origin",
+)
+
+# ── Rate limiting ──────────────────────────────────────────────
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["300 per hour"],
+    storage_uri="memory://",
+)
 
 # ── Login ───────────────────────────────────────────────────────
 login_manager = LoginManager(app)
@@ -40,9 +66,20 @@ def formato_precio(valor):
     return "$" + f"{valor:,.0f}".replace(",", ".")
 
 
+# ── Validación de contraseña ───────────────────────────────────
+def validar_password(password):
+    errores = []
+    if len(password) < 8:
+        errores.append("Debe tener al menos 8 caracteres.")
+    if not re.search(r"[A-Za-z]", password):
+        errores.append("Debe incluir al menos una letra.")
+    if not re.search(r"[0-9]", password):
+        errores.append("Debe incluir al menos un número.")
+    return errores
+
+
 # ── Helpers ────────────────────────────────────────────────────
 def get_subasta_actual():
-    """Devuelve la subasta abierta del usuario, creando una si no existe."""
     subasta = Auction.query.filter_by(user_id=current_user.id, abierta=True).first()
     if subasta is None:
         ultimo_numero = (
@@ -59,6 +96,7 @@ def get_subasta_actual():
 
 # ── Auth ───────────────────────────────────────────────────────
 @app.route("/registro", methods=["GET", "POST"])
+@limiter.limit("10 per hour")
 def registro():
     if current_user.is_authenticated:
         return redirect(url_for("index"))
@@ -72,12 +110,22 @@ def registro():
             flash("Completá usuario y contraseña.")
             return render_template("registro.html")
 
-        if password != confirmar:
-            flash("Las contraseñas no coinciden.")
+        if len(username) < 3 or len(username) > 32:
+            flash("El nombre de usuario debe tener entre 3 y 32 caracteres.")
             return render_template("registro.html")
 
-        if len(password) < 6:
-            flash("La contraseña debe tener al menos 6 caracteres.")
+        if not re.match(r"^[a-zA-Z0-9_\-\.]+$", username):
+            flash("El usuario solo puede contener letras, números, _, - y .")
+            return render_template("registro.html")
+
+        errores_pw = validar_password(password)
+        if errores_pw:
+            for e in errores_pw:
+                flash(e)
+            return render_template("registro.html")
+
+        if password != confirmar:
+            flash("Las contraseñas no coinciden.")
             return render_template("registro.html")
 
         if User.query.filter_by(username=username).first():
@@ -96,6 +144,7 @@ def registro():
 
 
 @app.route("/login", methods=["GET", "POST"])
+@limiter.limit("20 per hour", methods=["POST"])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("index"))
@@ -107,6 +156,7 @@ def login():
         password = request.form.get("password", "")
 
         user = User.query.filter_by(username=username).first()
+        # Siempre tomamos el mismo tiempo para no filtrar si el usuario existe
         if user is None or not user.check_password(password):
             flash("Usuario o contraseña incorrectos.")
             return render_template("login.html", usernames=usernames)
@@ -135,11 +185,12 @@ def index():
 # ── Compras de la subasta actual ────────────────────────────────
 @app.route("/agregar", methods=["POST"])
 @login_required
+@limiter.limit("200 per hour")
 def agregar():
     data = request.get_json()
-    comprador = data.get("comprador", "").strip()
-    contacto = data.get("contacto", "").strip()
-    carta = data.get("carta", "").strip()
+    comprador = data.get("comprador", "").strip()[:100]
+    contacto = data.get("contacto", "").strip()[:50]
+    carta = data.get("carta", "").strip()[:200]
     precio = data.get("precio", "").strip()
 
     if not comprador or not carta or not precio:
@@ -152,6 +203,9 @@ def agregar():
 
     if precio_num < 0:
         return jsonify({"error": "El precio no puede ser negativo"}), 400
+
+    if precio_num > 100_000_000:
+        return jsonify({"error": "Precio demasiado alto"}), 400
 
     subasta = get_subasta_actual()
     compra = Purchase(
@@ -260,12 +314,13 @@ def compradores():
 # ── Edición de subastas cerradas ────────────────────────────────
 @app.route("/historial/<int:subasta_id>/agregar", methods=["POST"])
 @login_required
+@limiter.limit("200 per hour")
 def historial_agregar(subasta_id):
     subasta = Auction.query.filter_by(id=subasta_id, user_id=current_user.id).first_or_404()
     data = request.get_json()
-    comprador = data.get("comprador", "").strip()
-    contacto = data.get("contacto", "").strip()
-    carta = data.get("carta", "").strip()
+    comprador = data.get("comprador", "").strip()[:100]
+    contacto = data.get("contacto", "").strip()[:50]
+    carta = data.get("carta", "").strip()[:200]
     precio = data.get("precio", "").strip()
 
     if not comprador or not carta or not precio:
@@ -287,46 +342,6 @@ def historial_agregar(subasta_id):
         precio=precio_num,
     )
     db.session.add(compra)
-    db.session.commit()
-    return jsonify({"ok": True})
-
-
-@app.route("/historial/<int:subasta_id>/actualizar/<int:compra_id>", methods=["POST"])
-@login_required
-def historial_actualizar(subasta_id, compra_id):
-    """Actualiza una compra existente dentro de una subasta del usuario."""
-    subasta = Auction.query.filter_by(
-        id=subasta_id,
-        user_id=current_user.id
-    ).first_or_404()
-
-    compra = Purchase.query.filter_by(
-        id=compra_id,
-        auction_id=subasta.id
-    ).first_or_404()
-
-    data = request.get_json() or {}
-    comprador = data.get("comprador", "").strip()
-    contacto = data.get("contacto", "").strip()
-    carta = data.get("carta", "").strip()
-    precio = data.get("precio", "").strip()
-
-    if not comprador or not carta or not precio:
-        return jsonify({"error": "Faltan datos"}), 400
-
-    try:
-        precio_num = float(precio.replace(".", "").replace(",", "."))
-    except ValueError:
-        return jsonify({"error": "Precio inválido"}), 400
-
-    if precio_num < 0:
-        return jsonify({"error": "El precio no puede ser negativo"}), 400
-
-    compra.comprador = comprador
-    compra.contacto = contacto
-    compra.carta = carta
-    compra.precio = precio_num
-
     db.session.commit()
     return jsonify({"ok": True})
 
@@ -370,12 +385,9 @@ def compradores_lista():
                     "total": 0.0,
                     "compras": 0,
                 }
-
             d = datos[c.comprador]
-
             if c.contacto and not d["contacto"]:
                 d["contacto"] = c.contacto
-
             d["subastas"].add(s.numero)
             d["total"] += c.precio
             d["compras"] += 1
@@ -398,8 +410,8 @@ def compradores_lista():
 @login_required
 def editar_comprador(nombre):
     data = request.get_json()
-    nuevo_nombre = data.get("nombre", "").strip()
-    nuevo_contacto = data.get("contacto", "").strip()
+    nuevo_nombre = data.get("nombre", "").strip()[:100]
+    nuevo_contacto = data.get("contacto", "").strip()[:50]
 
     if not nuevo_nombre:
         return jsonify({"error": "El nombre no puede estar vacío"}), 400
@@ -425,7 +437,6 @@ def editar_comprador(nombre):
 @app.route("/compradores/<nombre>/eliminar", methods=["POST"])
 @login_required
 def eliminar_comprador(nombre):
-    """Elimina todas las compras asociadas a ese contacto del usuario."""
     compras = (
         db.session.query(Purchase)
         .join(Auction)
@@ -479,16 +490,13 @@ def historial_detalle(subasta_id):
             "carta": c.carta,
             "precio": c.precio,
         })
-
         if c.contacto and not contactos.get(c.comprador):
             contactos[c.comprador] = c.contacto
 
     resumenes_subasta = []
-
     for nombre in sorted(agrupado.keys()):
         items = agrupado[nombre]
         total = sum(i["precio"] for i in items)
-
         resumenes_subasta.append({
             "comprador": nombre,
             "contacto": contactos.get(nombre, ""),
@@ -523,31 +531,23 @@ def api_estadisticas():
     total_generado = sum(s.total for s in subastas_cerradas)
     cantidad_subastas = len(subastas_cerradas)
     promedio_por_subasta = (
-        total_generado / cantidad_subastas
-        if cantidad_subastas
-        else 0
+        total_generado / cantidad_subastas if cantidad_subastas else 0
     )
 
     gasto_por_comprador = defaultdict(float)
     subastas_por_comprador = defaultdict(set)
-    compras_por_comprador = defaultdict(int)
 
     for s in subastas_cerradas:
         for c in s.compras:
             gasto_por_comprador[c.comprador] += c.precio
             subastas_por_comprador[c.comprador].add(s.id)
-            compras_por_comprador[c.comprador] += 1
 
     top_por_gasto = sorted(
-        gasto_por_comprador.items(),
-        key=lambda x: x[1],
-        reverse=True
+        gasto_por_comprador.items(), key=lambda x: x[1], reverse=True
     )[:5]
 
     top_por_frecuencia = sorted(
-        subastas_por_comprador.items(),
-        key=lambda x: len(x[1]),
-        reverse=True
+        subastas_por_comprador.items(), key=lambda x: len(x[1]), reverse=True
     )[:5]
 
     evolucion = [
@@ -568,16 +568,9 @@ def api_estadisticas():
         "total_generado": total_generado,
         "cantidad_subastas": cantidad_subastas,
         "promedio_por_subasta": promedio_por_subasta,
-        "top_por_gasto": [
-            {"comprador": n, "total": t}
-            for n, t in top_por_gasto
-        ],
+        "top_por_gasto": [{"comprador": n, "total": t} for n, t in top_por_gasto],
         "top_por_frecuencia": [
-            {
-                "comprador": n,
-                "subastas": len(s),
-                "gastado": gasto_por_comprador[n],
-            }
+            {"comprador": n, "subastas": len(s), "gastado": gasto_por_comprador[n]}
             for n, s in top_por_frecuencia
         ],
         "evolucion": evolucion,
