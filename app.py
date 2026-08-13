@@ -94,6 +94,14 @@ def get_subasta_actual():
     return subasta
 
 
+# ── Landing ────────────────────────────────────────────────────
+@app.route("/landing")
+def landing():
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+    return render_template("landing.html")
+
+
 # ── Auth ───────────────────────────────────────────────────────
 @app.route("/registro", methods=["GET", "POST"])
 @limiter.limit("10 per hour")
