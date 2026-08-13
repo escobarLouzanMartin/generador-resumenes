@@ -48,13 +48,17 @@ limiter = Limiter(
 
 # ── Login ───────────────────────────────────────────────────────
 login_manager = LoginManager(app)
-login_manager.login_view = "login"
-login_manager.login_message = "Iniciá sesión para continuar."
+login_manager.login_message = None
 
 
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
+
+
+@login_manager.unauthorized_handler
+def unauthorized():
+    return redirect(url_for("landing"))
 
 
 with app.app_context():
