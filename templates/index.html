@@ -12,13 +12,13 @@
       background: #0f0f0f;
       color: #e0e0e0;
       min-height: 100vh;
-      padding: 24px;
+      padding: 16px;
     }
 
     h1 {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 600;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
       color: #fff;
     }
 
@@ -60,7 +60,7 @@
       border-radius: 8px;
       color: #e0e0e0;
       padding: 10px 12px;
-      font-size: 14px;
+      font-size: 16px;
       outline: none;
       transition: border-color 0.2s;
     }
@@ -70,10 +70,10 @@
     .btn {
       width: 100%;
       margin-top: 16px;
-      padding: 11px;
+      padding: 13px;
       border-radius: 8px;
       border: none;
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 500;
       cursor: pointer;
       transition: opacity 0.2s;
@@ -106,7 +106,7 @@
       background: #111;
       border: 1px solid #2a2a2a;
       border-radius: 8px;
-      padding: 8px 12px;
+      padding: 10px 12px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -122,8 +122,8 @@
       border: none;
       color: #555;
       cursor: pointer;
-      font-size: 16px;
-      padding: 4px 8px;
+      font-size: 20px;
+      padding: 6px 10px;
       border-radius: 6px;
       transition: color 0.2s;
     }
@@ -163,19 +163,22 @@
       font-weight: 500;
       padding: 4px 10px;
       border-radius: 6px;
+      white-space: nowrap;
+      margin-left: 8px;
     }
 
     .resumen-item {
       display: flex;
       justify-content: space-between;
-      padding: 7px 16px;
+      padding: 8px 16px;
       font-size: 13px;
       border-bottom: 1px solid #1a1a1a;
+      gap: 8px;
     }
 
     .resumen-item:last-child { border-bottom: none; }
     .resumen-item .r-carta { color: #ccc; }
-    .resumen-item .r-precio { color: #888; }
+    .resumen-item .r-precio { color: #888; white-space: nowrap; }
 
     .acciones {
       display: flex;
@@ -183,6 +186,22 @@
       margin-top: 4px;
     }
     .acciones .btn { margin-top: 0; }
+
+    /* Mobile */
+    @media (max-width: 700px) {
+      body { padding: 12px; }
+
+      h1 { font-size: 18px; margin-bottom: 16px; }
+
+      .layout {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      .panel { padding: 16px; }
+
+      .compras-lista { max-height: 220px; }
+    }
   </style>
 </head>
 <body>
