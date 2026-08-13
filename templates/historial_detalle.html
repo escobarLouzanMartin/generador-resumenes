@@ -102,7 +102,7 @@
 
       <div class="error-msg" id="error"></div>
       <div class="editing-badge" id="editing-badge">
-        Editando compra — guardá para confirmar
+        Editando subasta — guardá los cambios para confirmar
       </div>
 
       <button class="btn btn-primary" id="btn-agregar" onclick="guardarCompra()">
@@ -147,7 +147,7 @@
   <div class="salir-modal-box">
     <h2>Hay cambios sin guardar</h2>
     <p>
-      Estás editando una compra. ¿Querés guardar los cambios antes de volver al historial?
+      Estás editando una subasta. ¿Querés guardar los cambios antes de volver al historial?
     </p>
 
     <div class="salir-modal-acciones">
@@ -169,6 +169,7 @@
 <script>
   const SUBASTA_ID = {{ subasta.id }};
 
+  let editandoId = null;
   let editandoIdx = null;
   let compradoresCache = [];
   let formularioInicial = null;
@@ -285,42 +286,48 @@
       return false;
     }
 
-    if (editandoIdx !== null) {
-      const resEliminar = await fetch(
-        `/historial/${SUBASTA_ID}/eliminar`,
+    let res;
+
+    if (editandoId !== null) {
+      // Estamos modificando una compra que pertenece a una subasta terminada.
+      // Se actualiza la compra existente, sin borrarla y recrearla.
+      res = await fetch(
+        `/historial/${SUBASTA_ID}/actualizar/${editandoId}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ index: editandoIdx })
+          body: JSON.stringify({
+            comprador,
+            contacto,
+            carta,
+            precio
+          })
         }
       );
-
-      if (!resEliminar.ok) {
-        const dataEliminar = await resEliminar.json();
-        errorEl.textContent = dataEliminar.error || 'No se pudo actualizar la compra.';
-        return false;
-      }
+    } else {
+      // Agregar una compra nueva a la subasta terminada.
+      res = await fetch(`/historial/${SUBASTA_ID}/agregar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          comprador,
+          contacto,
+          carta,
+          precio
+        })
+      });
     }
-
-    const res = await fetch(`/historial/${SUBASTA_ID}/agregar`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        comprador,
-        contacto,
-        carta,
-        precio
-      })
-    });
 
     const data = await res.json();
 
     if (!res.ok) {
-      errorEl.textContent = data.error;
+      errorEl.textContent = data.error || 'No se pudieron guardar los cambios.';
       return false;
     }
 
+    editandoId = null;
     editandoIdx = null;
+    editandoId = null;
     formularioInicial = null;
 
     limpiarFormulario();
@@ -362,31 +369,33 @@
       `{% if subasta.fecha_cierre %}<span style="color:#555; font-weight:400;"> · cerrada el {{ subasta.fecha_cierre.strftime('%d/%m/%Y') }}</span>{% endif %}`;
 
     editandoIdx = null;
+    editandoId = null;
     formularioInicial = null;
   }
 
-  function editarCompra(idx) {
-    fetch(`/historial/${SUBASTA_ID}/compras`)
-      .then(r => r.json())
-      .then(compras => {
-        const c = compras[idx];
+  async function editarCompra(idx) {
+    const res = await fetch(`/historial/${SUBASTA_ID}/compras`);
+    const compras = await res.json();
+    const c = compras[idx];
 
-        document.getElementById('comprador').value = c.comprador;
-        document.getElementById('contacto').value = c.contacto || '';
-        document.getElementById('carta').value = c.carta;
-        document.getElementById('precio').value = c.precio;
+    if (!c) return;
 
-        formularioInicial = obtenerDatosFormulario();
-        editandoIdx = idx;
+    document.getElementById('comprador').value = c.comprador;
+    document.getElementById('contacto').value = c.contacto || '';
+    document.getElementById('carta').value = c.carta;
+    document.getElementById('precio').value = c.precio;
 
-        document.getElementById('editing-badge').classList.add('visible');
-        document.getElementById('btn-agregar').textContent = 'Guardar cambios';
-        document.getElementById('btn-guardar-salir').style.display = '';
-        document.getElementById('btn-cancelar').style.display = '';
-        document.getElementById('form-titulo').textContent = 'Editar compra';
+    formularioInicial = obtenerDatosFormulario();
+    editandoIdx = idx;
+    editandoId = c.id;
 
-        document.getElementById('carta').focus();
-      });
+    document.getElementById('editing-badge').classList.add('visible');
+    document.getElementById('btn-agregar').textContent = 'Guardar cambios';
+    document.getElementById('btn-guardar-salir').style.display = '';
+    document.getElementById('btn-cancelar').style.display = '';
+    document.getElementById('form-titulo').textContent = 'Editar subasta';
+
+    document.getElementById('comprador').focus();
   }
 
   function cancelarEdicion() {

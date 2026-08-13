@@ -291,6 +291,46 @@ def historial_agregar(subasta_id):
     return jsonify({"ok": True})
 
 
+@app.route("/historial/<int:subasta_id>/actualizar/<int:compra_id>", methods=["POST"])
+@login_required
+def historial_actualizar(subasta_id, compra_id):
+    """Actualiza una compra existente dentro de una subasta del usuario."""
+    subasta = Auction.query.filter_by(
+        id=subasta_id,
+        user_id=current_user.id
+    ).first_or_404()
+
+    compra = Purchase.query.filter_by(
+        id=compra_id,
+        auction_id=subasta.id
+    ).first_or_404()
+
+    data = request.get_json() or {}
+    comprador = data.get("comprador", "").strip()
+    contacto = data.get("contacto", "").strip()
+    carta = data.get("carta", "").strip()
+    precio = data.get("precio", "").strip()
+
+    if not comprador or not carta or not precio:
+        return jsonify({"error": "Faltan datos"}), 400
+
+    try:
+        precio_num = float(precio.replace(".", "").replace(",", "."))
+    except ValueError:
+        return jsonify({"error": "Precio inválido"}), 400
+
+    if precio_num < 0:
+        return jsonify({"error": "El precio no puede ser negativo"}), 400
+
+    compra.comprador = comprador
+    compra.contacto = contacto
+    compra.carta = carta
+    compra.precio = precio_num
+
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
 @app.route("/historial/<int:subasta_id>/eliminar", methods=["POST"])
 @login_required
 def historial_eliminar(subasta_id):
