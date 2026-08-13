@@ -29,7 +29,6 @@
             <div class="comprador-meta">
               {{ c.compras }} compra{{ 's' if c.compras != 1 else '' }}
               · {{ c.subastas|length }} subasta{{ 's' if c.subastas|length != 1 else '' }}
-              ({% for s in c.subastas %}#{{ s }}{% if not loop.last %}, {% endif %}{% endfor %})
             </div>
             <div class="comprador-total">Total gastado: {{ c.total|precio }}</div>
           </div>
