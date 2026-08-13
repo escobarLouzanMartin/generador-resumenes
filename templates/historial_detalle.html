@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subasta #{{ subasta.numero }} — Generador de Resúmenes</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+{% include '_nav.html' with context %}
+
+<div style="max-width: 700px;">
+  <a href="{{ url_for('historial') }}" style="font-size:13px; color:#888;">&larr; Volver al historial</a>
+
+  <div class="panel" style="margin-top: 14px;">
+    <h2>
+      Subasta #{{ subasta.numero }}
+      {% if subasta.fecha_cierre %} · cerrada el {{ subasta.fecha_cierre.strftime('%d/%m/%Y %H:%M') }}{% endif %}
+    </h2>
+
+    {% if resumenes|length == 0 %}
+      <div class="empty">Esta subasta no tiene compras cargadas.</div>
+    {% else %}
+      <div class="resumenes-grid">
+        {% for r in resumenes %}
+          <div class="resumen-card">
+            <div class="resumen-header">
+              <div class="resumen-header-left">
+                <span class="resumen-nombre">{{ r.comprador }}</span>
+                {% if r.contacto %}<span class="resumen-contacto">{{ r.contacto }}</span>{% endif %}
+              </div>
+              <div class="resumen-header-right">
+                <span class="resumen-total">Total: {{ r.total|precio }}</span>
+              </div>
+            </div>
+            {% for i in r['items'] %}
+              <div class="resumen-item">
+                <span class="r-carta">{{ i.carta }}</span>
+                <span class="r-precio">{{ i.precio|precio }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% endfor %}
+
+        <div style="background:#1e1e1e; border:1px solid #2a2a2a; border-radius:10px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:14px; font-weight:500; color:#fff;">Total de la subasta</span>
+          <span style="background:#1d4ed8; color:#fff; font-size:14px; font-weight:600; padding:5px 12px; border-radius:6px;">{{ subasta.total|precio }}</span>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+</body>
+</html>

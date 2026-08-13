@@ -1,0 +1,12 @@
+<div class="topbar">
+  <h1>Generador de Resúmenes de Subasta</h1>
+  <div class="topbar-nav">
+    <a href="{{ url_for('index') }}" class="{{ 'activo' if activo == 'actual' else '' }}">Subasta actual</a>
+    <a href="{{ url_for('historial') }}" class="{{ 'activo' if activo == 'historial' else '' }}">Historial</a>
+    <a href="{{ url_for('estadisticas') }}" class="{{ 'activo' if activo == 'estadisticas' else '' }}">Estadísticas</a>
+    <div class="topbar-user">
+      {{ current_user.username }}
+      <a href="{{ url_for('logout') }}">Salir</a>
+    </div>
+  </div>
+</div>

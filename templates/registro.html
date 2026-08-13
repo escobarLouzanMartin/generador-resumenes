@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crear cuenta — Generador de Resúmenes</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="panel auth-panel">
+      <h1>Crear cuenta</h1>
+      <p class="auth-sub">Registrate para empezar a llevar el historial de tus subastas</p>
+
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          {% for m in messages %}
+            <div class="auth-flash">{{ m }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST">
+        <label>Usuario</label>
+        <input type="text" name="username" autocomplete="username" required autofocus>
+
+        <label>Contraseña</label>
+        <input type="password" name="password" autocomplete="new-password" required>
+
+        <label>Confirmar contraseña</label>
+        <input type="password" name="confirmar" autocomplete="new-password" required>
+
+        <button class="btn btn-primary" type="submit">Crear cuenta</button>
+      </form>
+
+      <div class="auth-link">¿Ya tenés cuenta? <a href="{{ url_for('login') }}">Iniciá sesión</a></div>
+    </div>
+  </div>
+</body>
+</html>

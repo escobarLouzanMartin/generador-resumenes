@@ -4,253 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Generador de Resúmenes</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #0f0f0f;
-      color: #e0e0e0;
-      min-height: 100vh;
-      padding: 16px;
-    }
-
-    h1 { font-size: 20px; font-weight: 600; margin-bottom: 20px; color: #fff; }
-
-    .layout {
-      display: grid;
-      grid-template-columns: 380px 1fr;
-      gap: 24px;
-      max-width: 1100px;
-    }
-
-    .panel {
-      background: #1a1a1a;
-      border: 1px solid #2a2a2a;
-      border-radius: 12px;
-      padding: 20px;
-    }
-
-    .panel h2 {
-      font-size: 14px;
-      font-weight: 500;
-      color: #888;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 16px;
-    }
-
-    label { display: block; font-size: 12px; color: #888; margin-bottom: 4px; margin-top: 12px; }
-
-    input, .autocomplete-wrapper input {
-      width: 100%;
-      background: #111;
-      border: 1px solid #2a2a2a;
-      border-radius: 8px;
-      color: #e0e0e0;
-      padding: 10px 12px;
-      font-family: inherit;
-      font-size: 16px;
-      font-weight: 400;
-      letter-spacing: normal;
-      line-height: normal;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    input:focus { border-color: #444; }
-
-    .autocomplete-wrapper {
-      position: relative;
-      background: #111;
-      border: 1px solid #2a2a2a;
-      border-radius: 8px;
-    }
-    .autocomplete-wrapper input { border-color: transparent; }
-    .autocomplete-wrapper input:focus { border-color: #444; }
-    .autocomplete-wrapper:focus-within { border-color: #444; }
-
-    /* Ghost text: capa detrás del input real que muestra la sugerencia.
-       El input va encima con fondo transparente; los caracteres ya
-       tipeados quedan invisibles en la capa ghost (misma tipografía),
-       y el resto de la sugerencia se ve atenuada. */
-    .autocomplete-wrapper input {
-      position: relative;
-      z-index: 1;
-      background: transparent;
-    }
-    .autocomplete-ghost {
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      display: flex;
-      align-items: center;
-      padding: 10px 12px;
-      font-family: inherit;
-      font-size: 16px;
-      font-weight: 400;
-      letter-spacing: normal;
-      line-height: normal;
-      white-space: pre;
-      overflow: hidden;
-      pointer-events: none;
-      border: 1px solid transparent;
-    }
-    .autocomplete-ghost .typed { visibility: hidden; }
-    .autocomplete-ghost .suggestion { color: #555; }
-
-    .btn {
-      width: 100%;
-      margin-top: 16px;
-      padding: 13px;
-      border-radius: 8px;
-      border: none;
-      font-size: 15px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: opacity 0.2s;
-    }
-    .btn:hover { opacity: 0.85; }
-    .btn-primary { background: #1d4ed8; color: #ccc; }
-    .btn-danger  { background: #991b1b; color: #ccc; margin-top: 8px; }
-    .btn-success { background: #15803d; color: #ccc; margin-top: 8px; }
-    .btn-edit    { background: #92400e; color: #ccc; margin-top: 8px; }
-
-    .error-msg { font-size: 13px; color: #ef4444; margin-top: 8px; min-height: 18px; }
-
-    .editing-badge {
-      display: none;
-      font-size: 12px;
-      color: #f59e0b;
-      margin-top: 6px;
-    }
-    .editing-badge.visible { display: block; }
-
-    .compras-lista {
-      margin-top: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      max-height: 320px;
-      overflow-y: auto;
-    }
-
-    .compra-item {
-      background: #111;
-      border: 1px solid #2a2a2a;
-      border-radius: 8px;
-      padding: 10px 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 13px;
-    }
-    .compra-item.editing { border-color: #f59e0b; }
-
-    .compra-item .info { flex: 1; }
-    .compra-item .nombre { font-weight: 500; color: #fff; }
-    .compra-item .carta-precio { color: #888; font-size: 12px; margin-top: 2px; }
-
-    .item-acciones { display: flex; gap: 4px; }
-
-    .btn-editar, .btn-eliminar {
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 13px;
-      padding: 6px 8px;
-      border-radius: 6px;
-      color: #555;
-      transition: color 0.2s;
-    }
-    .btn-editar:hover { color: #ccc; }
-    .btn-eliminar { font-size: 16px; }
-    .btn-eliminar:hover { color: #ef4444; }
-
-    .empty { color: #444; font-size: 13px; text-align: center; padding: 20px 0; }
-
-    .acciones { display: flex; gap: 8px; margin-top: 4px; }
-    .acciones .btn { margin-top: 0; }
-
-    /* Resúmenes */
-    .resumenes-grid { display: flex; flex-direction: column; gap: 14px; }
-
-    .resumen-card {
-      background: #111;
-      border: 1px solid #2a2a2a;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-
-    .resumen-header {
-      background: #1e1e1e;
-      padding: 10px 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid #2a2a2a;
-      gap: 8px;
-    }
-
-    .resumen-header-left { display: flex; flex-direction: column; gap: 2px; }
-    .resumen-nombre { font-weight: 500; font-size: 15px; color: #fff; }
-    .resumen-contacto { font-size: 11px; color: #666; }
-
-    .resumen-header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-
-    .resumen-total {
-      background: #1d4ed8;
-      color: #fff;
-      font-size: 13px;
-      font-weight: 500;
-      padding: 4px 10px;
-      border-radius: 6px;
-      white-space: nowrap;
-    }
-
-    .btn-copiar {
-      background: #1e1e1e;
-      border: 1px solid #333;
-      color: #888;
-      cursor: pointer;
-      font-size: 13px;
-      padding: 4px 10px;
-      border-radius: 6px;
-      transition: all 0.2s;
-      white-space: nowrap;
-    }
-    .btn-copiar:hover { border-color: #555; color: #ccc; }
-    .btn-copiar.copiado { border-color: #15803d; color: #4ade80; }
-
-    .resumen-item {
-      display: flex;
-      justify-content: space-between;
-      padding: 8px 16px;
-      font-size: 13px;
-      border-bottom: 1px solid #1a1a1a;
-      gap: 8px;
-    }
-    .resumen-item:last-child { border-bottom: none; }
-    .resumen-item .r-carta { color: #ccc; }
-    .resumen-item .r-precio { color: #888; white-space: nowrap; }
-
-    /* Mobile */
-    @media (max-width: 700px) {
-      body { padding: 12px; }
-      h1 { font-size: 18px; margin-bottom: 16px; }
-      .layout { grid-template-columns: 1fr; gap: 16px; }
-      .panel { padding: 16px; }
-      .compras-lista { max-height: 220px; }
-    }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
-<h1>Generador de Resúmenes de Subasta</h1>
+{% include '_nav.html' with context %}
 
 <div class="layout">
 
   <div>
     <div class="panel">
-      <h2 id="form-titulo">Cargar compra</h2>
+      <h2 id="form-titulo">Subasta #{{ subasta.numero }} — Cargar compra</h2>
 
       <label>Comprador</label>
       <div class="autocomplete-wrapper">
@@ -283,6 +47,16 @@
         <div class="empty">Ninguna compra cargada aún</div>
       </div>
     </div>
+
+    <div class="panel" style="margin-top: 16px;">
+      <h2>Cerrar subasta</h2>
+      <p style="font-size:13px; color:#888;">
+        Cuando termines de cargar todas las compras, cerrá la subasta para que quede guardada
+        en tu historial y sume a tus estadísticas. Se va a abrir una subasta nueva automáticamente.
+      </p>
+      <button class="btn btn-success" onclick="cerrarSubasta()">Cerrar subasta</button>
+      <div class="error-msg" id="error-cierre"></div>
+    </div>
   </div>
 
   <div class="panel">
@@ -296,7 +70,7 @@
 
 <script>
   let editandoIdx = null;
-  let comprasCache = [];
+  let compradoresCache = []; // historial global: [{comprador, contacto}]
 
   function formatPrecio(n) {
     return '$' + n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -309,20 +83,14 @@
   }
 
   // ── Autocompletado (estilo Gmail: texto fantasma + Tab) ──────
-  function getCompradoresUnicos() {
-    const vistos = new Set();
-    const nombres = [];
-    for (const c of comprasCache) {
-      if (!vistos.has(c.comprador)) {
-        vistos.add(c.comprador);
-        nombres.push(c.comprador);
-      }
-    }
-    return nombres;
+  // Usa el historial completo del usuario (todas sus subastas, no solo la actual).
+  async function cargarCompradores() {
+    const res = await fetch('/compradores');
+    compradoresCache = await res.json();
   }
 
   function contactoDeComprador(nombre) {
-    const c = comprasCache.find(c => c.comprador === nombre && c.contacto);
+    const c = compradoresCache.find(c => c.comprador === nombre && c.contacto);
     return c ? c.contacto : '';
   }
 
@@ -336,9 +104,9 @@
 
     if (!val) { ghostComprador.innerHTML = ''; return; }
 
-    const match = getCompradoresUnicos().find(n =>
-      n.toLowerCase().startsWith(val.toLowerCase()) && n.length > val.length
-    );
+    const match = compradoresCache
+      .map(c => c.comprador)
+      .find(n => n.toLowerCase().startsWith(val.toLowerCase()) && n.length > val.length);
 
     if (!match) { ghostComprador.innerHTML = ''; return; }
 
@@ -404,6 +172,7 @@
     limpiarFormulario();
     await cargarCompras();
     await generarResumenes();
+    await cargarCompradores();
   }
 
   function limpiarFormulario() {
@@ -416,7 +185,7 @@
     document.getElementById('btn-agregar').textContent = 'Agregar compra';
     document.getElementById('btn-cancelar').style.display = 'none';
     document.getElementById('btn-limpiar').style.display = '';
-    document.getElementById('form-titulo').textContent = 'Cargar compra';
+    document.getElementById('form-titulo').textContent = 'Subasta #{{ subasta.numero }} — Cargar compra';
     editandoIdx = null;
     const esMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
     if (!esMobile) document.getElementById('carta').focus();
@@ -448,7 +217,6 @@
   async function cargarCompras() {
     const res = await fetch('/compras');
     const compras = await res.json();
-    comprasCache = compras;
 
     document.getElementById('contador').textContent = compras.length;
     const lista = document.getElementById('compras-lista');
@@ -544,18 +312,33 @@
     });
   }
 
-  // ── Limpiar ─────────────────────────────────────────────────
+  // ── Limpiar / Cerrar subasta ──────────────────────────────────
   async function limpiarTodo() {
-    if (!confirm('¿Seguro que querés limpiar todas las compras?')) return;
+    if (!confirm('¿Seguro que querés limpiar todas las compras de esta subasta?')) return;
     await fetch('/limpiar', { method: 'POST' });
     await cargarCompras();
     await generarResumenes();
+  }
+
+  async function cerrarSubasta() {
+    const errorEl = document.getElementById('error-cierre');
+    errorEl.textContent = '';
+
+    if (!confirm('¿Cerrar esta subasta? Vas a poder verla en tu historial y se va a abrir una nueva.')) return;
+
+    const res = await fetch('/cerrar_subasta', { method: 'POST' });
+    const data = await res.json();
+
+    if (!res.ok) { errorEl.textContent = data.error; return; }
+
+    location.reload();
   }
 
   // ── Init ─────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', async () => {
     await cargarCompras();
     await generarResumenes();
+    await cargarCompradores();
 
     document.getElementById('precio').addEventListener('keydown', e => {
       if (e.key === 'Enter') guardarCompra();

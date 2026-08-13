@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Historial — Generador de Resúmenes</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+{% include '_nav.html' with context %}
+
+<div class="panel" style="max-width: 700px;">
+  <h2>Subastas cerradas ({{ subastas|length }})</h2>
+
+  {% if subastas|length == 0 %}
+    <div class="empty">Todavía no cerraste ninguna subasta.</div>
+  {% else %}
+    <div class="subastas-lista">
+      {% for s in subastas %}
+        <a class="subasta-card" href="{{ url_for('historial_detalle', subasta_id=s.id) }}">
+          <div>
+            <div class="subasta-titulo">Subasta #{{ s.numero }}</div>
+            <div class="subasta-meta">
+              {{ s.fecha_cierre.strftime('%d/%m/%Y %H:%M') if s.fecha_cierre else '' }}
+              · {{ s.compradores_unicos }} comprador{{ 'es' if s.compradores_unicos != 1 else '' }}
+              · {{ s.compras|length }} carta{{ 's' if s.compras|length != 1 else '' }}
+            </div>
+          </div>
+          <span class="subasta-total">{{ s.total|precio }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>
+
+</body>
+</html>

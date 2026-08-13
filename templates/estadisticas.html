@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estadísticas — Generador de Resúmenes</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+</head>
+<body>
+
+{% include '_nav.html' with context %}
+
+<div id="contenido-stats">
+  <div class="empty">Cargando estadísticas...</div>
+</div>
+
+<script>
+  function formatPrecio(n) {
+    return '$' + n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+
+  async function cargarEstadisticas() {
+    const res = await fetch('/api/estadisticas');
+    const data = await res.json();
+    const cont = document.getElementById('contenido-stats');
+
+    if (data.cantidad_subastas === 0) {
+      cont.innerHTML = '<div class="panel"><div class="empty">Todavía no cerraste ninguna subasta. Las estadísticas van a aparecer acá una vez que cierres al menos una.</div></div>';
+      return;
+    }
+
+    cont.innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total generado</div>
+          <div class="stat-value">${formatPrecio(data.total_generado)}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Subastas cerradas</div>
+          <div class="stat-value">${data.cantidad_subastas}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Promedio por subasta</div>
+          <div class="stat-value">${formatPrecio(data.promedio_por_subasta)}</div>
+        </div>
+      </div>
+
+      <div class="stats-panels">
+        <div class="panel">
+          <h2>Evolución por subasta</h2>
+          <canvas id="grafico-evolucion" height="180"></canvas>
+        </div>
+
+        <div class="panel">
+          <h2>Compradores más fieles</h2>
+          <p style="font-size:12px; color:#666; margin-bottom:8px;">Por cantidad de subastas en las que compraron</p>
+          <div class="top-lista" id="top-frecuencia"></div>
+
+          <h2 style="margin-top:20px;">Compradores que más gastaron</h2>
+          <div class="top-lista" id="top-gasto"></div>
+        </div>
+      </div>
+    `;
+
+    // Top por frecuencia (fidelidad)
+    const topFrecuenciaEl = document.getElementById('top-frecuencia');
+    if (data.top_por_frecuencia.length === 0) {
+      topFrecuenciaEl.innerHTML = '<div class="empty">Sin datos aún</div>';
+    } else {
+      topFrecuenciaEl.innerHTML = data.top_por_frecuencia.map((c, i) => `
+        <div class="top-item">
+          <span class="rank">#${i + 1}</span>
+          <span class="nombre">${c.comprador}</span>
+          <span class="valor">${c.subastas} subasta${c.subastas !== 1 ? 's' : ''} · ${formatPrecio(c.gastado)}</span>
+        </div>
+      `).join('');
+    }
+
+    // Top por gasto
+    const topGastoEl = document.getElementById('top-gasto');
+    if (data.top_por_gasto.length === 0) {
+      topGastoEl.innerHTML = '<div class="empty">Sin datos aún</div>';
+    } else {
+      topGastoEl.innerHTML = data.top_por_gasto.map((c, i) => `
+        <div class="top-item">
+          <span class="rank">#${i + 1}</span>
+          <span class="nombre">${c.comprador}</span>
+          <span class="valor">${formatPrecio(c.total)}</span>
+        </div>
+      `).join('');
+    }
+
+    // Gráfico de evolución
+    const ctx = document.getElementById('grafico-evolucion');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: data.evolucion.map(e => 'Subasta #' + e.numero),
+        datasets: [{
+          label: 'Total generado',
+          data: data.evolucion.map(e => e.total),
+          borderColor: '#1d4ed8',
+          backgroundColor: 'rgba(29, 78, 216, 0.15)',
+          tension: 0.25,
+          fill: true,
+          pointRadius: 3,
+          pointBackgroundColor: '#1d4ed8',
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => formatPrecio(ctx.parsed.y)
+            }
+          }
+        },
+        scales: {
+          y: {
+            ticks: { color: '#888', callback: v => formatPrecio(v) },
+            grid: { color: '#222' }
+          },
+          x: {
+            ticks: { color: '#888' },
+            grid: { color: '#1a1a1a' }
+          }
+        }
+      }
+    });
+  }
+
+  cargarEstadisticas();
+</script>
+
+</body>
+</html>
