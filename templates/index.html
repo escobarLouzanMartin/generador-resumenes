@@ -358,8 +358,11 @@
     document.getElementById('resumenes').innerHTML = '<div class="empty">Los resúmenes aparecerán acá una vez que generes</div>';
   }
 
-  // Enter en precio dispara agregar
   document.addEventListener('DOMContentLoaded', () => {
+    // Cargar compras existentes al abrir la página
+    cargarCompras();
+
+    // Enter en precio dispara agregar
     document.getElementById('precio').addEventListener('keydown', e => {
       if (e.key === 'Enter') agregarCompra();
     });
