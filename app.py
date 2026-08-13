@@ -355,6 +355,15 @@ def editar_comprador(nombre):
             c.contacto = nuevo_contacto
     db.session.commit()
     return jsonify({"ok": True})
+@app.route("/historial/<int:subasta_id>/eliminar_subasta", methods=["POST"])
+@login_required
+def eliminar_subasta(subasta_id):
+    subasta = Auction.query.filter_by(id=subasta_id, user_id=current_user.id).first_or_404()
+    db.session.delete(subasta)
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
 @app.route("/historial")
 @login_required
 def historial():

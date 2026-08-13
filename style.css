@@ -348,73 +348,23 @@ input:focus { border-color: #444; }
   .stats-panels { grid-template-columns: 1fr; }
 }
 
-/* ── Compradores ─────────────────────────────────────────────── */
-.compradores-lista { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
-
-.comprador-card {
+/* ── Borrar subasta ──────────────────────────────────────────── */
+.subasta-card-wrap {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  background: #111;
-  border: 1px solid #2a2a2a;
-  border-radius: 8px;
-  padding: 12px 14px;
-  gap: 12px;
-}
-
-.comprador-info { flex: 1; }
-.comprador-nombre { font-weight: 500; color: #fff; font-size: 14px; }
-.comprador-contacto { font-size: 12px; color: #666; margin-top: 2px; }
-.comprador-meta { font-size: 12px; color: #555; margin-top: 4px; }
-
-.btn-editar-comprador {
-  background: none;
-  border: 1px solid #333;
-  color: #888;
-  cursor: pointer;
-  font-size: 13px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-.btn-editar-comprador:hover { border-color: #f59e0b; color: #f59e0b; }
-
-.comprador-edit-form {
-  background: #111;
-  border: 1px solid #f59e0b44;
-  border-radius: 8px;
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
   gap: 8px;
 }
+.subasta-card-wrap .subasta-card { flex: 1; }
 
-.comprador-edit-form input {
-  background: #0f0f0f;
-  border: 1px solid #2a2a2a;
+.btn-borrar-subasta {
+  background: none;
+  border: none;
+  color: #444;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 8px;
   border-radius: 6px;
-  color: #e0e0e0;
-  padding: 8px 10px;
-  font-size: 14px;
-  outline: none;
+  flex-shrink: 0;
+  transition: color 0.2s;
 }
-.comprador-edit-form input:focus { border-color: #444; }
-
-.edit-acciones { display: flex; gap: 8px; }
-
-.btn-guardar-comprador {
-  background: #15803d; color: #ccc; border: none;
-  padding: 8px 16px; border-radius: 6px; font-size: 13px;
-  cursor: pointer; transition: opacity 0.2s;
-}
-.btn-guardar-comprador:hover { opacity: 0.85; }
-
-.btn-cancelar-comprador {
-  background: none; color: #888; border: 1px solid #333;
-  padding: 8px 16px; border-radius: 6px; font-size: 13px;
-  cursor: pointer; transition: all 0.2s;
-}
-.btn-cancelar-comprador:hover { border-color: #555; color: #ccc; }
-
-.edit-error { font-size: 12px; color: #ef4444; min-height: 16px; }
+.btn-borrar-subasta:hover { color: #ef4444; }

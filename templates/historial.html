@@ -18,21 +18,34 @@
   {% else %}
     <div class="subastas-lista">
       {% for s in subastas %}
-        <a class="subasta-card" href="{{ url_for('historial_detalle', subasta_id=s.id) }}">
-          <div>
-            <div class="subasta-titulo">Subasta #{{ s.numero }}</div>
-            <div class="subasta-meta">
-              {{ s.fecha_cierre.strftime('%d/%m/%Y %H:%M') if s.fecha_cierre else '' }}
-              · {{ s.compradores_unicos }} comprador{{ 'es' if s.compradores_unicos != 1 else '' }}
-              · {{ s.compras|length }} carta{{ 's' if s.compras|length != 1 else '' }}
+        <div class="subasta-card-wrap">
+          <a class="subasta-card" href="{{ url_for('historial_detalle', subasta_id=s.id) }}">
+            <div>
+              <div class="subasta-titulo">Subasta #{{ s.numero }}</div>
+              <div class="subasta-meta">
+                {{ s.fecha_cierre.strftime('%d/%m/%Y %H:%M') if s.fecha_cierre else '' }}
+                · {{ s.compradores_unicos }} comprador{{ 'es' if s.compradores_unicos != 1 else '' }}
+                · {{ s.compras|length }} carta{{ 's' if s.compras|length != 1 else '' }}
+              </div>
             </div>
-          </div>
-          <span class="subasta-total">{{ s.total|precio }}</span>
-        </a>
+            <span class="subasta-total">{{ s.total|precio }}</span>
+          </a>
+          <button class="btn-borrar-subasta" onclick="borrarSubasta(event, {{ s.id }}, {{ s.numero }})">✕</button>
+        </div>
       {% endfor %}
     </div>
   {% endif %}
 </div>
+
+<script>
+  async function borrarSubasta(e, id, numero) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm(`¿Borrar la Subasta #${numero}? Esta acción no se puede deshacer.`)) return;
+    const res = await fetch(`/historial/${id}/eliminar_subasta`, { method: 'POST' });
+    if (res.ok) location.reload();
+  }
+</script>
 
 </body>
 </html>
