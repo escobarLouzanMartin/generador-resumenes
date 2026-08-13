@@ -24,6 +24,9 @@ def agregar():
     except ValueError:
         return jsonify({"error": "Precio inválido"}), 400
 
+    if precio_num < 0:
+        return jsonify({"error": "El precio no puede ser negativo"}), 400
+
     compras.append({
         "comprador": comprador,
         "carta": carta,
