@@ -21,13 +21,17 @@
         <div class="comprador-card" id="card-{{ loop.index }}">
           <div class="comprador-info">
             <div class="comprador-nombre">{{ c.nombre }}</div>
-            <div class="comprador-contacto">{{ c.contacto if c.contacto else '—' }}</div>
+            {% if c.contacto %}
+              <div class="comprador-contacto">{{ c.contacto }}</div>
+            {% else %}
+              <div class="comprador-contacto">Sin contacto</div>
+            {% endif %}
             <div class="comprador-meta">
               {{ c.compras }} compra{{ 's' if c.compras != 1 else '' }}
               · {{ c.subastas|length }} subasta{{ 's' if c.subastas|length != 1 else '' }}
               ({% for s in c.subastas %}#{{ s }}{% if not loop.last %}, {% endif %}{% endfor %})
-              · Total: {{ c.total|precio }}
             </div>
+            <div class="comprador-total">Total gastado: {{ c.total|precio }}</div>
           </div>
           <button class="btn-editar-comprador" onclick="abrirEdicion('{{ c.nombre|e }}', '{{ c.contacto|e }}', {{ loop.index }})">Editar</button>
         </div>

@@ -357,14 +357,101 @@ input:focus { border-color: #444; }
 .subasta-card-wrap .subasta-card { flex: 1; }
 
 .btn-borrar-subasta {
-  background: none;
-  border: none;
-  color: #333;
+  background: #1e1e1e;
+  border: 1px solid #2a2a2a;
+  color: #666;
   cursor: pointer;
-  font-size: 14px;
-  padding: 8px;
-  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 8px;
   flex-shrink: 0;
-  transition: color 0.2s;
+  transition: all 0.2s;
+  white-space: nowrap;
 }
-.btn-borrar-subasta:hover { color: #666; }
+.btn-borrar-subasta:hover { background: #2a2a2a; color: #aaa; border-color: #3a3a3a; }
+
+/* ── Compradores ─────────────────────────────────────────────── */
+.compradores-lista { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+
+.comprador-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: #111;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  padding: 14px 16px;
+  gap: 12px;
+}
+
+.comprador-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.comprador-nombre { font-weight: 600; color: #fff; font-size: 15px; }
+.comprador-contacto { font-size: 13px; color: #555; }
+.comprador-meta { font-size: 12px; color: #444; margin-top: 4px; line-height: 1.6; }
+.comprador-total { font-size: 13px; color: #888; font-weight: 500; }
+
+.btn-editar-comprador {
+  background: #1e1e1e;
+  border: 1px solid #2a2a2a;
+  color: #666;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-editar-comprador:hover { background: #2a2a2a; color: #aaa; border-color: #3a3a3a; }
+
+.comprador-edit-form {
+  background: #111;
+  border: 1px solid #f59e0b44;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.comprador-edit-form input {
+  background: #0f0f0f;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  color: #e0e0e0;
+  padding: 8px 10px;
+  font-size: 14px;
+  outline: none;
+}
+.comprador-edit-form input:focus { border-color: #444; }
+
+.edit-acciones { display: flex; gap: 8px; }
+
+.btn-guardar-comprador {
+  background: #1e1e1e;
+  border: 1px solid #2a2a2a;
+  color: #888;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-guardar-comprador:hover { background: #2a2a2a; color: #ccc; border-color: #3a3a3a; }
+
+.btn-cancelar-comprador {
+  background: none;
+  color: #555;
+  border: 1px solid #222;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-cancelar-comprador:hover { border-color: #333; color: #888; }
+
+.edit-error { font-size: 12px; color: #ef4444; min-height: 16px; }

@@ -188,7 +188,7 @@
     document.getElementById('form-titulo').textContent = 'Subasta #{{ subasta.numero }} — Cargar compra';
     editandoIdx = null;
     const esMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-    if (!esMobile) document.getElementById('carta').focus();
+    if (!esMobile) document.getElementById('comprador').focus();
   }
 
   function editarCompra(idx) {
