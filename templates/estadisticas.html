@@ -16,8 +16,13 @@
 </div>
 
 <script>
+  let graficoEvolucion = null;
+
   function formatPrecio(n) {
-    return '$' + n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    return '$' + n.toLocaleString('es-AR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    });
   }
 
   async function cargarEstadisticas() {
@@ -26,7 +31,10 @@
     const cont = document.getElementById('contenido-stats');
 
     if (data.cantidad_subastas === 0) {
-      cont.innerHTML = '<div class="panel"><div class="empty">Todavía no cerraste ninguna subasta. Las estadísticas van a aparecer acá una vez que cierres al menos una.</div></div>';
+      cont.innerHTML =
+        '<div class="panel"><div class="empty">' +
+        'Todavía no cerraste ninguna subasta. Las estadísticas van a aparecer acá una vez que cierres al menos una.' +
+        '</div></div>';
       return;
     }
 
@@ -54,7 +62,9 @@
 
         <div class="panel">
           <h2>Compradores más fieles</h2>
-          <p style="font-size:12px; color:#666; margin-bottom:8px;">Por cantidad de subastas en las que compraron</p>
+          <p style="font-size:12px; color:#666; margin-bottom:8px;">
+            Por cantidad de subastas en las que compraron
+          </p>
           <div class="top-lista" id="top-frecuencia"></div>
 
           <h2 style="margin-top:20px;">Compradores que más gastaron</h2>
@@ -63,8 +73,8 @@
       </div>
     `;
 
-    // Top por frecuencia (fidelidad)
     const topFrecuenciaEl = document.getElementById('top-frecuencia');
+
     if (data.top_por_frecuencia.length === 0) {
       topFrecuenciaEl.innerHTML = '<div class="empty">Sin datos aún</div>';
     } else {
@@ -72,13 +82,15 @@
         <div class="top-item">
           <span class="rank">#${i + 1}</span>
           <span class="nombre">${c.comprador}</span>
-          <span class="valor">${c.subastas} subasta${c.subastas !== 1 ? 's' : ''} · ${formatPrecio(c.gastado)}</span>
+          <span class="valor">
+            ${c.subastas} subasta${c.subastas !== 1 ? 's' : ''} · ${formatPrecio(c.gastado)}
+          </span>
         </div>
       `).join('');
     }
 
-    // Top por gasto
     const topGastoEl = document.getElementById('top-gasto');
+
     if (data.top_por_gasto.length === 0) {
       topGastoEl.innerHTML = '<div class="empty">Sin datos aún</div>';
     } else {
@@ -91,44 +103,59 @@
       `).join('');
     }
 
-    // Gráfico de evolución
-    const ctx = document.getElementById('grafico-evolucion');
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: data.evolucion.map(e => 'Subasta #' + e.numero),
-        datasets: [{
-          label: 'Total generado',
-          data: data.evolucion.map(e => e.total),
-          borderColor: '#1d4ed8',
-          backgroundColor: 'rgba(29, 78, 216, 0.15)',
-          tension: 0.25,
-          fill: true,
-          pointRadius: 3,
-          pointBackgroundColor: '#1d4ed8',
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: ctx => formatPrecio(ctx.parsed.y)
+    // innerHTML termina de insertar el canvas de forma sincrónica,
+    // pero esperamos al próximo frame para asegurarnos de que el navegador
+    // ya haya incorporado el elemento antes de que Chart.js lo use.
+    requestAnimationFrame(() => {
+      const canvas = document.getElementById('grafico-evolucion');
+
+      if (!canvas) return;
+
+      if (graficoEvolucion) {
+        graficoEvolucion.destroy();
+        graficoEvolucion = null;
+      }
+
+      graficoEvolucion = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels: data.evolucion.map(e => 'Subasta #' + e.numero),
+          datasets: [{
+            label: 'Total generado',
+            data: data.evolucion.map(e => e.total),
+            borderColor: '#1d4ed8',
+            backgroundColor: 'rgba(29, 78, 216, 0.15)',
+            tension: 0.25,
+            fill: true,
+            pointRadius: 3,
+            pointBackgroundColor: '#1d4ed8',
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: ctx => formatPrecio(ctx.parsed.y)
+              }
+            }
+          },
+          scales: {
+            y: {
+              ticks: {
+                color: '#888',
+                callback: v => formatPrecio(v)
+              },
+              grid: { color: '#222' }
+            },
+            x: {
+              ticks: { color: '#888' },
+              grid: { color: '#1a1a1a' }
             }
           }
-        },
-        scales: {
-          y: {
-            ticks: { color: '#888', callback: v => formatPrecio(v) },
-            grid: { color: '#222' }
-          },
-          x: {
-            ticks: { color: '#888' },
-            grid: { color: '#1a1a1a' }
-          }
         }
-      }
+      });
     });
   }
 

@@ -13,7 +13,6 @@ app.secret_key = os.environ.get("SECRET_KEY", "clave-local-desarrollo")
 
 # ── Base de datos ──────────────────────────────────────────────
 db_url = os.environ.get("DATABASE_URL", "sqlite:///local.db")
-# Render entrega postgres:// pero SQLAlchemy espera postgresql://
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
@@ -125,7 +124,7 @@ def logout():
     return redirect(url_for("login"))
 
 
-# ── Página principal (subasta actual) ────────────────────────────
+# ── Página principal ────────────────────────────────────────────
 @app.route("/")
 @login_required
 def index():
@@ -133,7 +132,7 @@ def index():
     return render_template("index.html", subasta=subasta, activo="actual")
 
 
-# ── Compras de la subasta actual ─────────────────────────────────
+# ── Compras de la subasta actual ────────────────────────────────
 @app.route("/agregar", methods=["POST"])
 @login_required
 def agregar():
@@ -236,7 +235,7 @@ def cerrar_subasta():
     return jsonify({"ok": True})
 
 
-# ── Autocompletado global (todas las subastas del usuario) ──────
+# ── Autocompletado global ──────────────────────────────────────
 @app.route("/compradores", methods=["GET"])
 @login_required
 def compradores():
@@ -258,27 +257,35 @@ def compradores():
     return jsonify([{"comprador": n, "contacto": vistos[n]} for n in orden])
 
 
-# ── Edición de subastas cerradas ─────────────────────────────
+# ── Edición de subastas cerradas ────────────────────────────────
 @app.route("/historial/<int:subasta_id>/agregar", methods=["POST"])
 @login_required
 def historial_agregar(subasta_id):
     subasta = Auction.query.filter_by(id=subasta_id, user_id=current_user.id).first_or_404()
     data = request.get_json()
     comprador = data.get("comprador", "").strip()
-    contacto  = data.get("contacto", "").strip()
-    carta     = data.get("carta", "").strip()
-    precio    = data.get("precio", "").strip()
+    contacto = data.get("contacto", "").strip()
+    carta = data.get("carta", "").strip()
+    precio = data.get("precio", "").strip()
 
     if not comprador or not carta or not precio:
         return jsonify({"error": "Faltan datos"}), 400
+
     try:
         precio_num = float(precio.replace(".", "").replace(",", "."))
     except ValueError:
         return jsonify({"error": "Precio inválido"}), 400
+
     if precio_num < 0:
         return jsonify({"error": "El precio no puede ser negativo"}), 400
 
-    compra = Purchase(auction_id=subasta.id, comprador=comprador, contacto=contacto, carta=carta, precio=precio_num)
+    compra = Purchase(
+        auction_id=subasta.id,
+        comprador=comprador,
+        contacto=contacto,
+        carta=carta,
+        precio=precio_num,
+    )
     db.session.add(compra)
     db.session.commit()
     return jsonify({"ok": True})
@@ -291,8 +298,10 @@ def historial_eliminar(subasta_id):
     data = request.get_json()
     idx = data.get("index")
     compras = subasta.compras
+
     if idx is None or idx < 0 or idx >= len(compras):
         return jsonify({"error": "Índice inválido"}), 400
+
     db.session.delete(compras[idx])
     db.session.commit()
     return jsonify({"ok": True})
@@ -305,25 +314,40 @@ def historial_compras(subasta_id):
     return jsonify([c.to_dict() for c in subasta.compras])
 
 
-# ── Sección compradores ───────────────────────────────────────
+# ── Sección compradores ────────────────────────────────────────
 @app.route("/compradores_lista")
 @login_required
 def compradores_lista():
     subastas = Auction.query.filter_by(user_id=current_user.id).all()
-    datos = {}  # nombre -> {contacto, subastas: set, total, compras}
+    datos = {}
+
     for s in subastas:
         for c in s.compras:
             if c.comprador not in datos:
-                datos[c.comprador] = {"contacto": c.contacto or "", "subastas": set(), "total": 0.0, "compras": 0}
+                datos[c.comprador] = {
+                    "contacto": c.contacto or "",
+                    "subastas": set(),
+                    "total": 0.0,
+                    "compras": 0,
+                }
+
             d = datos[c.comprador]
+
             if c.contacto and not d["contacto"]:
                 d["contacto"] = c.contacto
+
             d["subastas"].add(s.numero)
             d["total"] += c.precio
             d["compras"] += 1
 
     resultado = sorted([
-        {"nombre": n, "contacto": d["contacto"], "subastas": sorted(d["subastas"]), "total": d["total"], "compras": d["compras"]}
+        {
+            "nombre": n,
+            "contacto": d["contacto"],
+            "subastas": sorted(d["subastas"]),
+            "total": d["total"],
+            "compras": d["compras"],
+        }
         for n, d in datos.items()
     ], key=lambda x: x["nombre"].lower())
 
@@ -334,7 +358,7 @@ def compradores_lista():
 @login_required
 def editar_comprador(nombre):
     data = request.get_json()
-    nuevo_nombre  = data.get("nombre", "").strip()
+    nuevo_nombre = data.get("nombre", "").strip()
     nuevo_contacto = data.get("contacto", "").strip()
 
     if not nuevo_nombre:
@@ -346,15 +370,42 @@ def editar_comprador(nombre):
         .filter(Auction.user_id == current_user.id, Purchase.comprador == nombre)
         .all()
     )
+
     if not compras:
         return jsonify({"error": "Comprador no encontrado"}), 404
 
     for c in compras:
         c.comprador = nuevo_nombre
-        if nuevo_contacto:
-            c.contacto = nuevo_contacto
+        c.contacto = nuevo_contacto
+
     db.session.commit()
     return jsonify({"ok": True})
+
+
+@app.route("/compradores/<nombre>/eliminar", methods=["POST"])
+@login_required
+def eliminar_comprador(nombre):
+    """Elimina todas las compras asociadas a ese contacto del usuario."""
+    compras = (
+        db.session.query(Purchase)
+        .join(Auction)
+        .filter(
+            Auction.user_id == current_user.id,
+            Purchase.comprador == nombre
+        )
+        .all()
+    )
+
+    if not compras:
+        return jsonify({"error": "Comprador no encontrado"}), 404
+
+    for compra in compras:
+        db.session.delete(compra)
+
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
 @app.route("/historial/<int:subasta_id>/eliminar_subasta", methods=["POST"])
 @login_required
 def eliminar_subasta(subasta_id):
@@ -382,15 +433,22 @@ def historial_detalle(subasta_id):
 
     agrupado = {}
     contactos = {}
+
     for c in subasta.compras:
-        agrupado.setdefault(c.comprador, []).append({"carta": c.carta, "precio": c.precio})
+        agrupado.setdefault(c.comprador, []).append({
+            "carta": c.carta,
+            "precio": c.precio,
+        })
+
         if c.contacto and not contactos.get(c.comprador):
             contactos[c.comprador] = c.contacto
 
     resumenes_subasta = []
+
     for nombre in sorted(agrupado.keys()):
         items = agrupado[nombre]
         total = sum(i["precio"] for i in items)
+
         resumenes_subasta.append({
             "comprador": nombre,
             "contacto": contactos.get(nombre, ""),
@@ -399,7 +457,10 @@ def historial_detalle(subasta_id):
         })
 
     return render_template(
-        "historial_detalle.html", subasta=subasta, resumenes=resumenes_subasta, activo="historial"
+        "historial_detalle.html",
+        subasta=subasta,
+        resumenes=resumenes_subasta,
+        activo="historial",
     )
 
 
@@ -421,10 +482,12 @@ def api_estadisticas():
 
     total_generado = sum(s.total for s in subastas_cerradas)
     cantidad_subastas = len(subastas_cerradas)
-    promedio_por_subasta = (total_generado / cantidad_subastas) if cantidad_subastas else 0
+    promedio_por_subasta = (
+        total_generado / cantidad_subastas
+        if cantidad_subastas
+        else 0
+    )
 
-    # Compradores más fieles: por cantidad de subastas distintas en las que compraron
-    # y por monto total gastado.
     gasto_por_comprador = defaultdict(float)
     subastas_por_comprador = defaultdict(set)
     compras_por_comprador = defaultdict(int)
@@ -436,16 +499,25 @@ def api_estadisticas():
             compras_por_comprador[c.comprador] += 1
 
     top_por_gasto = sorted(
-        gasto_por_comprador.items(), key=lambda x: x[1], reverse=True
+        gasto_por_comprador.items(),
+        key=lambda x: x[1],
+        reverse=True
     )[:5]
+
     top_por_frecuencia = sorted(
-        subastas_por_comprador.items(), key=lambda x: len(x[1]), reverse=True
+        subastas_por_comprador.items(),
+        key=lambda x: len(x[1]),
+        reverse=True
     )[:5]
 
     evolucion = [
         {
             "numero": s.numero,
-            "fecha": s.fecha_cierre.isoformat() if s.fecha_cierre else s.fecha_inicio.isoformat(),
+            "fecha": (
+                s.fecha_cierre.isoformat()
+                if s.fecha_cierre
+                else s.fecha_inicio.isoformat()
+            ),
             "total": s.total,
             "compradores": s.compradores_unicos,
         }
@@ -456,9 +528,16 @@ def api_estadisticas():
         "total_generado": total_generado,
         "cantidad_subastas": cantidad_subastas,
         "promedio_por_subasta": promedio_por_subasta,
-        "top_por_gasto": [{"comprador": n, "total": t} for n, t in top_por_gasto],
+        "top_por_gasto": [
+            {"comprador": n, "total": t}
+            for n, t in top_por_gasto
+        ],
         "top_por_frecuencia": [
-            {"comprador": n, "subastas": len(s), "gastado": gasto_por_comprador[n]}
+            {
+                "comprador": n,
+                "subastas": len(s),
+                "gastado": gasto_por_comprador[n],
+            }
             for n, s in top_por_frecuencia
         ],
         "evolucion": evolucion,
