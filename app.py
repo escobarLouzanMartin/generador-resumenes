@@ -115,11 +115,16 @@ def registro():
 
     if request.method == "POST":
         username = request.form.get("username", "").strip()
+        email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
         confirmar = request.form.get("confirmar", "")
 
-        if not username or not password:
-            flash("Completá usuario y contraseña.")
+        if not username or not password or not email:
+            flash("Completá todos los campos.")
+            return render_template("registro.html")
+
+        if not re.match(r"^[^@]+@[^@]+\.[^@]+$", email):
+            flash("El email no es válido.")
             return render_template("registro.html")
 
         if len(username) < 3 or len(username) > 32:
@@ -144,7 +149,11 @@ def registro():
             flash("Ese usuario ya existe.")
             return render_template("registro.html")
 
-        user = User(username=username)
+        if User.query.filter_by(email=email).first():
+            flash("Ese email ya está registrado.")
+            return render_template("registro.html")
+
+        user = User(username=username, email=email)
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
@@ -355,6 +364,38 @@ def historial_agregar(subasta_id):
     )
     db.session.add(compra)
     db.session.commit()
+    return jsonify({"ok": True})
+
+
+@app.route("/historial/<int:subasta_id>/actualizar/<int:compra_id>", methods=["POST"])
+@login_required
+def historial_actualizar(subasta_id, compra_id):
+    subasta = Auction.query.filter_by(id=subasta_id, user_id=current_user.id).first_or_404()
+    compra = Purchase.query.filter_by(id=compra_id, auction_id=subasta.id).first_or_404()
+
+    data = request.get_json()
+    comprador = data.get("comprador", "").strip()[:100]
+    contacto  = data.get("contacto", "").strip()[:50]
+    carta     = data.get("carta", "").strip()[:200]
+    precio    = data.get("precio", "").strip()
+
+    if not comprador or not carta or not precio:
+        return jsonify({"error": "Faltan datos"}), 400
+
+    try:
+        precio_num = float(precio.replace(".", "").replace(",", "."))
+    except ValueError:
+        return jsonify({"error": "Precio inválido"}), 400
+
+    if precio_num < 0:
+        return jsonify({"error": "El precio no puede ser negativo"}), 400
+
+    compra.comprador = comprador
+    compra.contacto  = contacto
+    compra.carta     = carta
+    compra.precio    = precio_num
+    db.session.commit()
+
     return jsonify({"ok": True})
 
 
