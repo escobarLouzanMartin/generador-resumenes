@@ -26,7 +26,7 @@
     <input type="text" value="{{ current_user.username }}" disabled style="opacity:0.4;">
 
     <label>Alias <span style="color:#555;">(aparece en los resúmenes copiados)</span></label>
-    <input type="text" name="alias" value="{{ current_user.alias or '' }}" placeholder="Ej: NightSub" maxlength="80" autocomplete="off">
+    <input type="text" name="alias" value="{{ current_user.alias or '' }}" placeholder="Ej: subastas.mp" maxlength="80" autocomplete="off">
 
     <button class="btn btn-primary" type="submit" style="margin-top:16px;">Guardar</button>
   </form>
