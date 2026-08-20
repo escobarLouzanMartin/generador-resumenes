@@ -271,6 +271,7 @@ input:focus { border-color: #444; }
 .auth-panel h1 { margin-bottom: 4px; }
 .auth-sub { color: #666; font-size: 13px; margin-bottom: 20px; }
 .auth-flash { font-size: 13px; color: #ef4444; margin-bottom: 8px; }
+.auth-flash-ok { color: #4ade80 !important; }
 .auth-link { display: block; text-align: center; margin-top: 16px; font-size: 13px; color: #888; }
 .auth-link a { color: #6d9bff; }
 
