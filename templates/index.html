@@ -87,7 +87,16 @@
 <script>
   let editandoIdx = null;
   let compradoresCache = []; // historial global: [{comprador, contacto}]
-  let fechaPago = null; // { dia, mes } o null
+
+  // Precargar fecha de pago si existe
+  {% if subasta.fecha_pago %}
+  let fechaPago = {
+    dia: '{{ subasta.fecha_pago.split("/")[0] }}',
+    mes: '{{ subasta.fecha_pago.split("/")[1] }}'
+  };
+  {% else %}
+  let fechaPago = null;
+  {% endif %}
 
   const diasPorMes = [31,29,31,30,31,30,31,31,30,31,30,31];
 
@@ -110,6 +119,7 @@
 
     if (!dia && !mes) {
       fechaPago = null;
+      fetch('/fecha-pago', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({fecha_pago: ''}) });
       okEl.textContent = 'Fecha de pago eliminada.';
       return;
     }
@@ -121,7 +131,9 @@
       dia: String(parseInt(dia,10)).padStart(2,'0'),
       mes: String(parseInt(mes,10)).padStart(2,'0')
     };
-    okEl.textContent = `Fecha guardada: ${fechaPago.dia}/${fechaPago.mes}`;
+    const fechaStr = `${fechaPago.dia}/${fechaPago.mes}`;
+    fetch('/fecha-pago', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({fecha_pago: fechaStr}) });
+    okEl.textContent = `Fecha guardada: ${fechaStr}`;
   }
 
   function formatPrecio(n) {
@@ -400,6 +412,13 @@
     await cargarCompras();
     await generarResumenes();
     await cargarCompradores();
+
+    // Mostrar fecha guardada si existe
+    if (fechaPago) {
+      document.getElementById('fecha-dia').value = fechaPago.dia;
+      document.getElementById('fecha-mes').value = fechaPago.mes;
+      document.getElementById('fecha-guardada').textContent = `Fecha guardada: ${fechaPago.dia}/${fechaPago.mes}`;
+    }
 
     const campos = ['comprador', 'contacto', 'carta', 'precio'];
 

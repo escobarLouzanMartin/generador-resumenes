@@ -85,7 +85,25 @@
         {% endif %}
       </h2>
 
-      <label>Comprador</label>
+      <label>Fecha de pago <span style="color:#555;">(opcional)</span></label>
+      <div style="display:flex; gap:8px; align-items:flex-start;">
+        <div style="flex:1;">
+          <input type="text" id="fecha-dia" placeholder="Día" maxlength="2" autocomplete="off" style="text-align:center;" value="{{ subasta.fecha_pago.split('/')[0] if subasta.fecha_pago else '' }}">
+        </div>
+        <div style="padding-top:10px; color:#555;">/</div>
+        <div style="flex:1;">
+          <input type="text" id="fecha-mes" placeholder="Mes" maxlength="2" autocomplete="off" style="text-align:center;" value="{{ subasta.fecha_pago.split('/')[1] if subasta.fecha_pago else '' }}">
+        </div>
+        <div style="flex:2; padding-top:2px;">
+          <button class="btn btn-primary" onclick="guardarFecha()" style="margin-top:0; padding:10px;">Guardar fecha</button>
+        </div>
+      </div>
+      <div class="error-msg" id="error-fecha"></div>
+      <div id="fecha-guardada" style="font-size:12px; color:#4ade80; margin-top:4px; min-height:16px;">
+        {% if subasta.fecha_pago %}Fecha guardada: {{ subasta.fecha_pago }}{% endif %}
+      </div>
+
+      <label style="margin-top:16px;">Comprador</label>
       <div class="autocomplete-wrapper">
         <div class="autocomplete-ghost" id="autocomplete-ghost"></div>
         <input type="text" id="comprador" placeholder="Ej: Ash Ketchum" autocomplete="off">
@@ -169,11 +187,58 @@
 <script>
   const SUBASTA_ID = {{ subasta.id }};
 
+  {% if subasta.fecha_pago %}
+  let fechaPago = {
+    dia: '{{ subasta.fecha_pago.split("/")[0] }}',
+    mes: '{{ subasta.fecha_pago.split("/")[1] }}'
+  };
+  {% else %}
+  let fechaPago = null;
+  {% endif %}
+
   let editandoId = null;
   let editandoIdx = null;
   let compradoresCache = [];
   let formularioInicial = null;
   let guardandoYSalendo = false;
+
+  const diasPorMes = [31,29,31,30,31,30,31,31,30,31,30,31];
+
+  function validarFecha(dia, mes) {
+    const d = parseInt(dia, 10);
+    const m = parseInt(mes, 10);
+    if (isNaN(d) || isNaN(m)) return 'Ingresá día y mes válidos.';
+    if (m < 1 || m > 12) return 'El mes debe ser entre 1 y 12.';
+    if (d < 1 || d > diasPorMes[m - 1]) return `El día debe ser entre 1 y ${diasPorMes[m - 1]} para ese mes.`;
+    return null;
+  }
+
+  function guardarFecha() {
+    const dia = document.getElementById('fecha-dia').value.trim();
+    const mes = document.getElementById('fecha-mes').value.trim();
+    const errorEl = document.getElementById('error-fecha');
+    const okEl = document.getElementById('fecha-guardada');
+    errorEl.textContent = '';
+    okEl.textContent = '';
+
+    if (!dia && !mes) {
+      fechaPago = null;
+      fetch(`/historial/${SUBASTA_ID}/fecha-pago`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({fecha_pago: ''}) });
+      okEl.textContent = 'Fecha de pago eliminada.';
+      return;
+    }
+
+    const error = validarFecha(dia, mes);
+    if (error) { errorEl.textContent = error; return; }
+
+    fechaPago = {
+      dia: String(parseInt(dia,10)).padStart(2,'0'),
+      mes: String(parseInt(mes,10)).padStart(2,'0')
+    };
+    const fechaStr = `${fechaPago.dia}/${fechaPago.mes}`;
+    fetch(`/historial/${SUBASTA_ID}/fecha-pago`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({fecha_pago: fechaStr}) });
+    okEl.textContent = `Fecha guardada: ${fechaStr}`;
+  }
 
   function formatPrecio(n) {
     return '$' + n.toLocaleString('es-AR', {
@@ -581,8 +646,6 @@
       fetch('/api/mi-alias').then(r => r.json()).then(aliasData => {
       const alias = aliasData.alias || '';
       const separador = '──────────────────';
-      const hoy = new Date();
-      const fecha = `${String(hoy.getDate()).padStart(2,'0')}/${String(hoy.getMonth()+1).padStart(2,'0')}`;
 
       const items = [...card.querySelectorAll('.resumen-item')].map(i =>
         `· ${i.querySelector('.r-carta').textContent}: ${i.querySelector('.r-precio').textContent}`
@@ -596,7 +659,7 @@
         total,
         '',
         alias ? `Alias: ${alias}` : null,
-        `Fecha de pago: ${fecha}`,
+        fechaPago ? `Fecha de pago: ${fechaPago.dia}/${fechaPago.mes}` : null,
       ].filter(l => l !== null);
 
       navigator.clipboard.writeText(lineas.join('\n')).then(() => {

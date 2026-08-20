@@ -212,6 +212,28 @@ def logout():
     return redirect(url_for("login"))
 
 
+@app.route("/fecha-pago", methods=["POST"])
+@login_required
+def guardar_fecha_pago():
+    data = request.get_json()
+    fecha = data.get("fecha_pago", "").strip()
+    subasta = get_subasta_actual()
+    subasta.fecha_pago = fecha if fecha else None
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+@app.route("/historial/<int:subasta_id>/fecha-pago", methods=["POST"])
+@login_required
+def guardar_fecha_pago_historial(subasta_id):
+    subasta = Auction.query.filter_by(id=subasta_id, user_id=current_user.id).first_or_404()
+    data = request.get_json()
+    fecha = data.get("fecha_pago", "").strip()
+    subasta.fecha_pago = fecha if fecha else None
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
 # ── Página principal ────────────────────────────────────────────
 @app.route("/")
 @login_required

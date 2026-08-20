@@ -36,9 +36,10 @@ class Auction(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
-    numero = db.Column(db.Integer, nullable=False)  # nº de subasta correlativo por usuario
+    numero = db.Column(db.Integer, nullable=False)
     fecha_inicio = db.Column(db.DateTime, default=ahora)
     fecha_cierre = db.Column(db.DateTime, nullable=True)
+    fecha_pago = db.Column(db.String(5), nullable=True)  # formato DD/MM
     abierta = db.Column(db.Boolean, default=True, nullable=False, index=True)
 
     compras = db.relationship(
