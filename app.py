@@ -188,6 +188,23 @@ def login():
     return render_template("login.html", usernames=usernames)
 
 
+@app.route("/perfil", methods=["GET", "POST"])
+@login_required
+def perfil():
+    if request.method == "POST":
+        alias = request.form.get("alias", "").strip()[:80]
+        current_user.alias = alias if alias else None
+        db.session.commit()
+        flash("Perfil actualizado.")
+    return render_template("perfil.html", activo="perfil")
+
+
+@app.route("/api/mi-alias")
+@login_required
+def mi_alias():
+    return jsonify({"alias": current_user.alias or current_user.username})
+
+
 @app.route("/logout")
 @login_required
 def logout():

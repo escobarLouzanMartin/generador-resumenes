@@ -292,14 +292,27 @@
   }
 
   function copiarResumen(btn, nombreComprador) {
-    fetch('/resumenes').then(r => r.json()).then(resumenes => {
+    Promise.all([
+      fetch('/resumenes').then(r => r.json()),
+      fetch('/api/mi-alias').then(r => r.json())
+    ]).then(([resumenes, aliasData]) => {
       const r = resumenes.find(x => x.comprador === nombreComprador);
       if (!r) return;
+
+      const alias = aliasData.alias || '';
+      const separador = '──────────────────';
+
       const lineas = [
-        ...r.items.map(i => `${i.carta}: ${formatPrecio(i.precio)}`),
+        separador,
+        `📋 ${r.comprador}`,
+        r.contacto ? `📞 ${r.contacto}` : null,
+        separador,
+        ...r.items.map(i => `· ${i.carta}: ${formatPrecio(i.precio)}`),
+        separador,
+        `Total: ${formatPrecio(r.total)}`,
         '',
-        `Total: ${formatPrecio(r.total)}`
-      ];
+        alias ? `Alias: ${alias}` : null,
+      ].filter(l => l !== null);
 
       navigator.clipboard.writeText(lineas.join('\n')).then(() => {
         btn.textContent = 'Copiado';

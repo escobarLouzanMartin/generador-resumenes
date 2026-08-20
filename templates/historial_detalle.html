@@ -578,21 +578,38 @@
 
     if (!card) return;
 
-    const items = [...card.querySelectorAll('.resumen-item')].map(i =>
-      `${i.querySelector('.r-carta').textContent}: ${i.querySelector('.r-precio').textContent}`
-    );
+    fetch('/api/mi-alias').then(r => r.json()).then(aliasData => {
+      const alias = aliasData.alias || '';
+      const separador = '──────────────────';
+      const contactoEl = card.querySelector('.resumen-contacto');
+      const contacto = contactoEl ? contactoEl.textContent.trim() : '';
 
-    const total = card.querySelector('.resumen-total').textContent;
-    const texto = [...items, '', total].join('\n');
+      const items = [...card.querySelectorAll('.resumen-item')].map(i =>
+        `· ${i.querySelector('.r-carta').textContent}: ${i.querySelector('.r-precio').textContent}`
+      );
 
-    navigator.clipboard.writeText(texto).then(() => {
-      btn.textContent = 'Copiado';
-      btn.classList.add('copiado');
+      const total = card.querySelector('.resumen-total').textContent.trim();
 
-      setTimeout(() => {
-        btn.textContent = 'Copiar';
-        btn.classList.remove('copiado');
-      }, 2000);
+      const lineas = [
+        separador,
+        `📋 ${nombre}`,
+        contacto ? `📞 ${contacto}` : null,
+        separador,
+        ...items,
+        separador,
+        total,
+        '',
+        alias ? `Alias: ${alias}` : null,
+      ].filter(l => l !== null);
+
+      navigator.clipboard.writeText(lineas.join('\n')).then(() => {
+        btn.textContent = 'Copiado';
+        btn.classList.add('copiado');
+        setTimeout(() => {
+          btn.textContent = 'Copiar';
+          btn.classList.remove('copiado');
+        }, 2000);
+      });
     });
   }
 

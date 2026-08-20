@@ -6,7 +6,7 @@
     <a href="{{ url_for('estadisticas') }}" class="{{ 'activo' if activo == 'estadisticas' else '' }}">Estadísticas</a>
     <a href="{{ url_for('compradores_lista') }}" class="{{ 'activo' if activo == 'compradores' else '' }}">Compradores</a>
     <div class="topbar-user">
-      {{ current_user.username }}
+      <a href="{{ url_for('perfil') }}" style="color:#666; text-decoration:none;">{{ current_user.username }}</a>
       <a href="{{ url_for('logout') }}">Salir</a>
     </div>
   </div>

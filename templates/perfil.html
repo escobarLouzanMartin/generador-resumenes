@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perfil — Generador de Resúmenes</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+{% include '_nav.html' with context %}
+
+<div class="panel" style="max-width: 480px;">
+  <h2>Mi perfil</h2>
+
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      {% for m in messages %}
+        <div class="auth-flash auth-flash-ok">{{ m }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <form method="POST">
+    <label>Usuario</label>
+    <input type="text" value="{{ current_user.username }}" disabled style="opacity:0.4;">
+
+    <label>Alias <span style="color:#555;">(aparece en los resúmenes copiados)</span></label>
+    <input type="text" name="alias" value="{{ current_user.alias or '' }}" placeholder="Ej: NightSub" maxlength="80" autocomplete="off">
+
+    <button class="btn btn-primary" type="submit" style="margin-top:16px;">Guardar</button>
+  </form>
+</div>
+
+<div class="footer">Martín Escobar Louzán · 2026</div>
+
+</body>
+</html>
