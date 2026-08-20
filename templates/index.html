@@ -16,7 +16,23 @@
     <div class="panel">
       <h2 id="form-titulo">Subasta #{{ subasta.numero }} — Cargar compra</h2>
 
-      <label>Comprador</label>
+      <label>Fecha de pago <span style="color:#555;">(opcional)</span></label>
+      <div style="display:flex; gap:8px; align-items:flex-start;">
+        <div style="flex:1;">
+          <input type="text" id="fecha-dia" placeholder="Día" maxlength="2" autocomplete="off" style="text-align:center;">
+        </div>
+        <div style="padding-top:10px; color:#555;">/</div>
+        <div style="flex:1;">
+          <input type="text" id="fecha-mes" placeholder="Mes" maxlength="2" autocomplete="off" style="text-align:center;">
+        </div>
+        <div style="flex:2; padding-top:2px;">
+          <button class="btn btn-primary" onclick="guardarFecha()" style="margin-top:0; padding:10px;">Guardar fecha</button>
+        </div>
+      </div>
+      <div class="error-msg" id="error-fecha"></div>
+      <div id="fecha-guardada" style="font-size:12px; color:#4ade80; margin-top:4px; min-height:16px;"></div>
+
+      <label style="margin-top:16px;">Comprador</label>
       <div class="autocomplete-wrapper">
         <div class="autocomplete-ghost" id="autocomplete-ghost"></div>
         <input type="text" id="comprador" placeholder="Ej: Ash Ketchum" autocomplete="off">
@@ -71,6 +87,42 @@
 <script>
   let editandoIdx = null;
   let compradoresCache = []; // historial global: [{comprador, contacto}]
+  let fechaPago = null; // { dia, mes } o null
+
+  const diasPorMes = [31,29,31,30,31,30,31,31,30,31,30,31];
+
+  function validarFecha(dia, mes) {
+    const d = parseInt(dia, 10);
+    const m = parseInt(mes, 10);
+    if (isNaN(d) || isNaN(m)) return 'Ingresá día y mes válidos.';
+    if (m < 1 || m > 12) return 'El mes debe ser entre 1 y 12.';
+    if (d < 1 || d > diasPorMes[m - 1]) return `El día debe ser entre 1 y ${diasPorMes[m - 1]} para ese mes.`;
+    return null;
+  }
+
+  function guardarFecha() {
+    const dia = document.getElementById('fecha-dia').value.trim();
+    const mes = document.getElementById('fecha-mes').value.trim();
+    const errorEl = document.getElementById('error-fecha');
+    const okEl = document.getElementById('fecha-guardada');
+    errorEl.textContent = '';
+    okEl.textContent = '';
+
+    if (!dia && !mes) {
+      fechaPago = null;
+      okEl.textContent = 'Fecha de pago eliminada.';
+      return;
+    }
+
+    const error = validarFecha(dia, mes);
+    if (error) { errorEl.textContent = error; return; }
+
+    fechaPago = {
+      dia: String(parseInt(dia,10)).padStart(2,'0'),
+      mes: String(parseInt(mes,10)).padStart(2,'0')
+    };
+    okEl.textContent = `Fecha guardada: ${fechaPago.dia}/${fechaPago.mes}`;
+  }
 
   function formatPrecio(n) {
     return '$' + n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -301,17 +353,13 @@
 
       const alias = aliasData.alias || '';
       const separador = '──────────────────';
-
       const lineas = [
-        separador,
-        `📋 ${r.comprador}`,
-        r.contacto ? `📞 ${r.contacto}` : null,
-        separador,
         ...r.items.map(i => `· ${i.carta}: ${formatPrecio(i.precio)}`),
         separador,
         `Total: ${formatPrecio(r.total)}`,
         '',
         alias ? `Alias: ${alias}` : null,
+        fechaPago ? `Fecha de pago: ${fechaPago.dia}/${fechaPago.mes}` : null,
       ].filter(l => l !== null);
 
       navigator.clipboard.writeText(lineas.join('\n')).then(() => {
@@ -359,6 +407,13 @@
       if (e.key === 'ArrowDown') { e.preventDefault(); document.getElementById(campos[Math.min(idx + 1, campos.length - 1)]).focus(); }
       if (e.key === 'ArrowUp')   { e.preventDefault(); document.getElementById(campos[Math.max(idx - 1, 0)]).focus(); }
     }
+
+    document.getElementById('fecha-dia').addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); document.getElementById('fecha-mes').focus(); }
+    });
+    document.getElementById('fecha-mes').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); guardarFecha(); }
+    });
 
     document.getElementById('precio').addEventListener('keydown', e => {
       if (e.key === 'Enter') guardarCompra();

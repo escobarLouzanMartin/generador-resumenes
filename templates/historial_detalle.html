@@ -578,11 +578,11 @@
 
     if (!card) return;
 
-    fetch('/api/mi-alias').then(r => r.json()).then(aliasData => {
+      fetch('/api/mi-alias').then(r => r.json()).then(aliasData => {
       const alias = aliasData.alias || '';
       const separador = '──────────────────';
-      const contactoEl = card.querySelector('.resumen-contacto');
-      const contacto = contactoEl ? contactoEl.textContent.trim() : '';
+      const hoy = new Date();
+      const fecha = `${String(hoy.getDate()).padStart(2,'0')}/${String(hoy.getMonth()+1).padStart(2,'0')}`;
 
       const items = [...card.querySelectorAll('.resumen-item')].map(i =>
         `· ${i.querySelector('.r-carta').textContent}: ${i.querySelector('.r-precio').textContent}`
@@ -591,15 +591,12 @@
       const total = card.querySelector('.resumen-total').textContent.trim();
 
       const lineas = [
-        separador,
-        `📋 ${nombre}`,
-        contacto ? `📞 ${contacto}` : null,
-        separador,
         ...items,
         separador,
         total,
         '',
         alias ? `Alias: ${alias}` : null,
+        `Fecha de pago: ${fecha}`,
       ].filter(l => l !== null);
 
       navigator.clipboard.writeText(lineas.join('\n')).then(() => {
