@@ -115,16 +115,11 @@ def registro():
 
     if request.method == "POST":
         username = request.form.get("username", "").strip()
-        email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
         confirmar = request.form.get("confirmar", "")
 
-        if not username or not password or not email:
-            flash("Completá todos los campos.")
-            return render_template("registro.html")
-
-        if not re.match(r"^[^@]+@[^@]+\.[^@]+$", email):
-            flash("El email no es válido.")
+        if not username or not password:
+            flash("Completá usuario y contraseña.")
             return render_template("registro.html")
 
         if len(username) < 3 or len(username) > 32:
@@ -149,11 +144,7 @@ def registro():
             flash("Ese usuario ya existe.")
             return render_template("registro.html")
 
-        if User.query.filter_by(email=email).first():
-            flash("Ese email ya está registrado.")
-            return render_template("registro.html")
-
-        user = User(username=username, email=email)
+        user = User(username=username)
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
