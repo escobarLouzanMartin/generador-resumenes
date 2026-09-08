@@ -13,7 +13,12 @@ from flask_talisman import Talisman
 from models import db, User, Auction, Purchase, ahora
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "clave-local-desarrollo")
+secret_key = os.environ.get("SECRET_KEY")
+if not secret_key:
+    if os.environ.get("RENDER"):
+        raise RuntimeError("SECRET_KEY no está configurada en producción.")
+    secret_key = "clave-local-solo-desarrollo"
+app.secret_key = secret_key
 
 # ── Base de datos ──────────────────────────────────────────────
 db_url = os.environ.get("DATABASE_URL", "sqlite:///local.db")
@@ -33,7 +38,14 @@ Talisman(
     app,
     force_https=EN_PRODUCCION,
     strict_transport_security=EN_PRODUCCION,
-    content_security_policy=False,  # CSP separado si se necesita
+    content_security_policy={
+        "default-src": "'self'",
+        "script-src": "'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
+        "style-src": "'self' 'unsafe-inline'",
+        "img-src": "'self' data:",
+        "font-src": "'self'",
+        "connect-src": "'self'",
+    },
     frame_options="DENY",
     referrer_policy="strict-origin-when-cross-origin",
 )
@@ -63,6 +75,13 @@ def unauthorized():
 
 with app.app_context():
     db.create_all()
+
+
+@app.after_request
+def agregar_headers_seguridad(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    return response
 
 
 @app.template_filter("precio")
@@ -661,4 +680,4 @@ def api_estadisticas():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=not EN_PRODUCCION)
