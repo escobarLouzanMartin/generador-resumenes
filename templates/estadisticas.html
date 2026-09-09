@@ -37,6 +37,11 @@
 
     .evolucion-punto {
       fill: #1d4ed8;
+      cursor: pointer;
+      transition: r 0.15s, fill 0.15s;
+    }
+    .evolucion-punto:hover {
+      fill: #60a5fa;
     }
 
     .evolucion-eje {
@@ -60,11 +65,26 @@
       font-size: 11px;
       font-family: Arial, sans-serif;
     }
+    #grafico-tooltip {
+      display: none;
+      position: fixed;
+      background: #1e1e1e;
+      border: 1px solid #333;
+      color: #e0e0e0;
+      font-size: 13px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      pointer-events: none;
+      z-index: 9999;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body>
 
 {% include '_nav.html' with context %}
+
+<div id="grafico-tooltip"></div>
 
 <div id="contenido-stats">
   <div class="empty">Cargando estadísticas...</div>
@@ -77,6 +97,29 @@
       maximumFractionDigits: 0
     });
   }
+
+  function mostrarTooltip(event, el) {
+    const tooltip = document.getElementById('grafico-tooltip');
+    tooltip.textContent = `Subasta #${el.dataset.numero} — ${el.dataset.total}`;
+    tooltip.style.display = 'block';
+    moverTooltip(event);
+  }
+
+  function moverTooltip(event) {
+    const tooltip = document.getElementById('grafico-tooltip');
+    tooltip.style.left = (event.clientX + 12) + 'px';
+    tooltip.style.top  = (event.clientY - 36) + 'px';
+  }
+
+  function ocultarTooltip() {
+    document.getElementById('grafico-tooltip').style.display = 'none';
+  }
+
+  document.addEventListener('mousemove', e => {
+    if (document.getElementById('grafico-tooltip').style.display === 'block') {
+      moverTooltip(e);
+    }
+  });
 
   function crearGraficoEvolucion(evolucion) {
     const contenedor = document.getElementById('grafico-evolucion');
@@ -148,8 +191,11 @@
       <circle class="evolucion-punto"
               cx="${x(i)}"
               cy="${y(Number(e.total) || 0)}"
-              r="5">
-        <title>Subasta #${e.numero}: ${formatPrecio(Number(e.total) || 0)}</title>
+              r="5"
+              data-numero="${e.numero}"
+              data-total="${formatPrecio(Number(e.total) || 0)}"
+              onmouseenter="mostrarTooltip(event, this)"
+              onmouseleave="ocultarTooltip()">
       </circle>
     `).join('');
 
