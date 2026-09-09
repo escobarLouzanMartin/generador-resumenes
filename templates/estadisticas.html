@@ -195,12 +195,23 @@
       <circle class="evolucion-anillo" id="anillo-${i}"
               cx="${x(i)}"
               cy="${y(Number(e.total) || 0)}"
-              r="10">
+              r="16">
       </circle>
       <circle class="evolucion-punto"
               cx="${x(i)}"
               cy="${y(Number(e.total) || 0)}"
               r="5"
+              data-numero="${e.numero}"
+              data-total="${formatPrecio(Number(e.total) || 0)}"
+              data-idx="${i}"
+              onmouseenter="mostrarTooltip(event, this)"
+              onmouseleave="ocultarTooltip(this)">
+      </circle>
+      <circle cx="${x(i)}"
+              cy="${y(Number(e.total) || 0)}"
+              r="18"
+              fill="transparent"
+              style="cursor:default;"
               data-numero="${e.numero}"
               data-total="${formatPrecio(Number(e.total) || 0)}"
               data-idx="${i}"
