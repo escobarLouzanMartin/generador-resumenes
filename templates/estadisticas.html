@@ -45,7 +45,15 @@
       stroke-width: 2;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.15s;
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+    .evolucion-anillo.activo {
+      animation: anillo-aparecer 0.2s ease-out forwards;
+    }
+    @keyframes anillo-aparecer {
+      from { opacity: 0; r: 5px; }
+      to   { opacity: 1; r: 9px; }
     }
 
     .evolucion-eje {
@@ -108,7 +116,11 @@
     tooltip.style.display = 'block';
     moverTooltip(event);
     const anillo = document.getElementById('anillo-' + el.dataset.idx);
-    if (anillo) anillo.style.opacity = '1';
+    if (anillo) {
+      anillo.classList.remove('activo');
+      void anillo.offsetWidth; // forzar reflow para reiniciar animación
+      anillo.classList.add('activo');
+    }
   }
 
   function moverTooltip(event) {
@@ -121,7 +133,7 @@
     document.getElementById('grafico-tooltip').style.display = 'none';
     if (el) {
       const anillo = document.getElementById('anillo-' + el.dataset.idx);
-      if (anillo) anillo.style.opacity = '0';
+      if (anillo) anillo.classList.remove('activo');
     }
   }
 
@@ -192,21 +204,6 @@
     `).join('');
 
     const puntosSvg = evolucion.map((e, i) => `
-      <circle class="evolucion-anillo" id="anillo-${i}"
-              cx="${x(i)}"
-              cy="${y(Number(e.total) || 0)}"
-              r="16">
-      </circle>
-      <circle class="evolucion-punto"
-              cx="${x(i)}"
-              cy="${y(Number(e.total) || 0)}"
-              r="5"
-              data-numero="${e.numero}"
-              data-total="${formatPrecio(Number(e.total) || 0)}"
-              data-idx="${i}"
-              onmouseenter="mostrarTooltip(event, this)"
-              onmouseleave="ocultarTooltip(this)">
-      </circle>
       <circle cx="${x(i)}"
               cy="${y(Number(e.total) || 0)}"
               r="18"
@@ -217,6 +214,22 @@
               data-idx="${i}"
               onmouseenter="mostrarTooltip(event, this)"
               onmouseleave="ocultarTooltip(this)">
+      </circle>
+      <circle class="evolucion-anillo" id="anillo-${i}"
+              cx="${x(i)}"
+              cy="${y(Number(e.total) || 0)}"
+              r="9">
+      </circle>
+      <circle class="evolucion-punto"
+              cx="${x(i)}"
+              cy="${y(Number(e.total) || 0)}"
+              r="5"
+              data-numero="${e.numero}"
+              data-total="${formatPrecio(Number(e.total) || 0)}"
+              data-idx="${i}"
+              onmouseenter="mostrarTooltip(event, this)"
+              onmouseleave="ocultarTooltip(this)"
+              style="pointer-events:none;">
       </circle>
     `).join('');
 
