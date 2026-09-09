@@ -8,7 +8,7 @@
   <style>
     .evolucion-grafico {
       width: 100%;
-      height: 300px;
+      height: 360px;
       display: block;
       margin-top: 10px;
     }
@@ -37,11 +37,15 @@
 
     .evolucion-punto {
       fill: #1d4ed8;
-      cursor: pointer;
-      transition: r 0.15s, fill 0.15s;
+      cursor: default;
     }
-    .evolucion-punto:hover {
-      fill: #60a5fa;
+    .evolucion-anillo {
+      fill: none;
+      stroke: #60a5fa;
+      stroke-width: 2;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s;
     }
 
     .evolucion-eje {
@@ -103,6 +107,8 @@
     tooltip.textContent = `Subasta #${el.dataset.numero} — ${el.dataset.total}`;
     tooltip.style.display = 'block';
     moverTooltip(event);
+    const anillo = document.getElementById('anillo-' + el.dataset.idx);
+    if (anillo) anillo.style.opacity = '1';
   }
 
   function moverTooltip(event) {
@@ -111,15 +117,13 @@
     tooltip.style.top  = (event.clientY - 36) + 'px';
   }
 
-  function ocultarTooltip() {
+  function ocultarTooltip(el) {
     document.getElementById('grafico-tooltip').style.display = 'none';
-  }
-
-  document.addEventListener('mousemove', e => {
-    if (document.getElementById('grafico-tooltip').style.display === 'block') {
-      moverTooltip(e);
+    if (el) {
+      const anillo = document.getElementById('anillo-' + el.dataset.idx);
+      if (anillo) anillo.style.opacity = '0';
     }
-  });
+  }
 
   function crearGraficoEvolucion(evolucion) {
     const contenedor = document.getElementById('grafico-evolucion');
@@ -188,21 +192,27 @@
     `).join('');
 
     const puntosSvg = evolucion.map((e, i) => `
+      <circle class="evolucion-anillo" id="anillo-${i}"
+              cx="${x(i)}"
+              cy="${y(Number(e.total) || 0)}"
+              r="10">
+      </circle>
       <circle class="evolucion-punto"
               cx="${x(i)}"
               cy="${y(Number(e.total) || 0)}"
               r="5"
               data-numero="${e.numero}"
               data-total="${formatPrecio(Number(e.total) || 0)}"
+              data-idx="${i}"
               onmouseenter="mostrarTooltip(event, this)"
-              onmouseleave="ocultarTooltip()">
+              onmouseleave="ocultarTooltip(this)">
       </circle>
     `).join('');
 
     contenedor.innerHTML = `
       <svg class="evolucion-grafico"
            viewBox="0 0 ${width} ${height}"
-           preserveAspectRatio="none"
+           preserveAspectRatio="xMidYMid meet"
            role="img"
            aria-label="Evolución del total generado por subasta">
         ${lineas}
