@@ -5,9 +5,40 @@
     <a href="{{ url_for('historial') }}" class="{{ 'activo' if activo == 'historial' else '' }}">Historial</a>
     <a href="{{ url_for('estadisticas') }}" class="{{ 'activo' if activo == 'estadisticas' else '' }}">Estadísticas</a>
     <a href="{{ url_for('compradores_lista') }}" class="{{ 'activo' if activo == 'compradores' else '' }}">Compradores</a>
+    <div class="theme-selector" title="Cambiar tema">
+      <span class="theme-dot" data-t="dark"      title="Oscuro"></span>
+      <span class="theme-dot" data-t="light"     title="Claro"></span>
+      <span class="theme-dot" data-t="midnight"  title="Midnight Blue"></span>
+      <span class="theme-dot" data-t="nord"      title="Nord"></span>
+      <span class="theme-dot" data-t="dracula"   title="Dracula"></span>
+      <span class="theme-dot" data-t="solarized" title="Solarized Dark"></span>
+    </div>
     <div class="topbar-user">
-      <a href="{{ url_for('perfil') }}" style="color:#666; text-decoration:none;">{{ current_user.username }}</a>
+      <a href="{{ url_for('perfil') }}" style="text-decoration:none;">{{ current_user.username }}</a>
       <a href="{{ url_for('logout') }}">Salir</a>
     </div>
   </div>
 </div>
+
+<script>
+  (function() {
+    const TEMAS = ['dark','light','midnight','nord','dracula','solarized'];
+    const tema = localStorage.getItem('tema') || 'dark';
+    document.documentElement.setAttribute('data-theme', tema);
+
+    function aplicarTema(t) {
+      document.documentElement.setAttribute('data-theme', t);
+      localStorage.setItem('tema', t);
+      document.querySelectorAll('.theme-dot').forEach(d => {
+        d.classList.toggle('activo', d.dataset.t === t);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      aplicarTema(tema);
+      document.querySelectorAll('.theme-dot').forEach(dot => {
+        dot.addEventListener('click', () => aplicarTema(dot.dataset.t));
+      });
+    });
+  })();
+</script>
